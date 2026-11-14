@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="quickgo.API/quickgo.API.csproj" />
+  <Project Path="quickgo.Application/quickgo.Application.csproj" />
+  <Project Path="quickgo.Domain/quickgo.Domain.csproj" />
+  <Project Path="quickgo.Infrastructure/quickgo.Infrastructure.csproj" />
+</Solution>

@@ -1,0 +1,6 @@
+@quickgo.API_HostAddress = http://localhost:5010
+
+GET {{quickgo.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
