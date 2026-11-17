@@ -16,4 +16,5 @@ public class QuickGoDbContext: DbContext
     public DbSet<Departamento> Departamentos { get; set; }
     public DbSet<Ciudad> Ciudades { get; set; }
     public DbSet<Moneda> Monedas { get; set; }
+    public DbSet<Cliente> Clientes { get; set; }
 }
