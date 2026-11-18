@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using quickgo.Application.Interfaces;
 using quickgo.Domain.entities;
+using quickgo.Domain.Enums;
 
 namespace quickgo.Infrastructure.Data;
 
@@ -14,9 +15,7 @@ public class QuickGoDbContext : DbContext
     {
         _tenant = tenant;
     }
-
-    public DbSet<TipoVehiculo> TiposVehiculo { get; set; }
-    public DbSet<Vehiculo> Vehiculos { get; set; }
+    
     public DbSet<Empresa> Empresas { get; set; }
     public DbSet<Rol> Roles { get; set; }
     public DbSet<Usuario> Usuarios { get; set; }
@@ -33,6 +32,11 @@ public class QuickGoDbContext : DbContext
     public DbSet<Pago> Pagos { get; set; }
     public DbSet<Subasta> Subastas { get; set; }
     public DbSet<Puja> Pujas { get; set; }
+    public DbSet<TipoVehiculo> TipoVehiculos => Set<TipoVehiculo>();
+    public DbSet<Vehiculo> Vehiculos => Set<Vehiculo>();
+    public DbSet<DocumentoVehiculo> DocumentosVehiculo => Set<DocumentoVehiculo>();
+    public DbSet<AsignacionVehiculoConductor> AsignacionesVehiculoConductor => Set<AsignacionVehiculoConductor>();
+    public DbSet<Conductor> Conductores => Set<Conductor>();
 
     // Lo leen los filtros globales: se evalua en cada consulta con la empresa del token.
     // Sin empresa (null) no devuelve nada (falla cerrado).
@@ -70,38 +74,7 @@ public class QuickGoDbContext : DbContext
 
     private void AplicarFiltroEmpresa<T>(ModelBuilder modelBuilder) where T : class, IEmpresaScoped
     {
-        modelBuilder.Entity<T>().HasQueryFilter(e => e.EmpresaId == EmpresaActualId);
     }
-
-    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        AsignarEmpresaEnInsertados();
-        return base.SaveChangesAsync(cancellationToken);
+    
     }
-
-    public override int SaveChanges()
-    {
-        AsignarEmpresaEnInsertados();
-        return base.SaveChanges();
-    }
-
-    // Al insertar, la empresa sale del token. Solo se completa cuando la entidad no trae empresa
-    // (nunca viene del cuerpo de la peticion); asi el registro de empresas y la adjudicacion de
-    // subastas, que escriben con una empresa explicita, no se pisan.
-    private void AsignarEmpresaEnInsertados()
-    {
-        if (_tenant.EmpresaId is not Guid empresaId)
-        {
-            return;
-        }
-
-        foreach (var entry in ChangeTracker.Entries<IEmpresaScoped>()
-                     .Where(e => e.State == EntityState.Added && e.Entity.EmpresaId == Guid.Empty))
-        {
-            entry.Entity.EmpresaId = empresaId;
-        }
-    }
-
-    private static string ASnake(string nombre) =>
-        Regex.Replace(nombre, "([a-z0-9])([A-Z])", "$1_$2").ToLowerInvariant();
 }

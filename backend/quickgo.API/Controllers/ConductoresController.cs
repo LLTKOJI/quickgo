@@ -1,3 +1,4 @@
+using quickgo.Application.Interfaces;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,8 +8,7 @@ using quickgo.Domain.Constants;
 
 namespace quickgo.API.Controllers;
 
-[ApiController]
-[Route("api/conductores")]
+
 [Authorize]
 public class ConductoresController : ApiControllerBase {
     private readonly ConductorService _service;
