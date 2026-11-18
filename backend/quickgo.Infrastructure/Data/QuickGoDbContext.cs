@@ -26,6 +26,11 @@ public class QuickGoDbContext : DbContext
     public DbSet<Ciudad> Ciudades { get; set; }
     public DbSet<Moneda> Monedas { get; set; }
     public DbSet<Cliente> Clientes { get; set; }
+    public DbSet<Direccion> Direcciones { get; set; }
+    public DbSet<Factura> Facturas { get; set; }
+    public DbSet<Envio> Envios { get; set; }
+    public DbSet<Cotizacion> Cotizaciones { get; set; }
+    public DbSet<Pago> Pagos { get; set; }
     public DbSet<Subasta> Subastas { get; set; }
     public DbSet<Puja> Pujas { get; set; }
 

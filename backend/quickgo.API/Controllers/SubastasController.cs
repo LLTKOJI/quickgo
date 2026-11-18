@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using quickgo.Application.Features.Subastas;
 using quickgo.Application.Features.Subastas.DTOs;
 using quickgo.Application.Interfaces;
 using quickgo.Domain.entities;
@@ -14,10 +15,15 @@ namespace quickgo.API.Controllers;
 public class SubastasController : ControllerBase {
     private readonly ISubastaRepository _repository;
     private readonly IValidator<CrearSubastaRequestDto> _validator;
+    private readonly SubastaCierreService _cierreService;
 
-    public SubastasController(ISubastaRepository repository, IValidator<CrearSubastaRequestDto> validator) {
+    public SubastasController(
+        ISubastaRepository repository,
+        IValidator<CrearSubastaRequestDto> validator,
+        SubastaCierreService cierreService) {
         _repository = repository;
         _validator = validator;
+        _cierreService = cierreService;
     }
 
     [HttpPost]
@@ -74,6 +80,51 @@ public class SubastasController : ControllerBase {
         return Created($"/api/subastas/{nueva.Id}", ToResponse(creada!, 0));
     }
 
+    [HttpGet("mias")]
+    [EndpointSummary("Mis subastas")]
+    [EndpointDescription("Rol: Contratante. Solo las subastas de la empresa, con filtro opcional por estado. Aplica el cierre automático de las vencidas antes de responder.")]
+    [ProducesResponseType(typeof(IEnumerable<SubastaResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetMisSubastas([FromQuery] EstadoSubasta? estado) {
+        var empresaId = ObtenerEmpresaId();
+        if (empresaId == null) {
+            return TokenSinEmpresa();
+        }
+
+        await _cierreService.AplicarEmpresaAsync(empresaId.Value);
+
+        var subastas = await _repository.ListarPorEmpresaAsync(empresaId.Value, estado);
+        var conteos = await _repository.ContarPujasPorSubastaAsync(subastas.Select(s => s.Id));
+
+        return Ok(subastas.Select(s => ToResponse(s, conteos.GetValueOrDefault(s.Id, 0))));
+    }
+
+    [HttpGet("{id:guid}")]
+    [EndpointSummary("Detalle de una subasta")]
+    [EndpointDescription("Rol: Contratante dueño. Incluye la cantidad de pujas. Si es de otra empresa responde 404. Aplica el cierre automático.")]
+    [ProducesResponseType(typeof(SubastaResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetSubasta(Guid id) {
+        var empresaId = ObtenerEmpresaId();
+        if (empresaId == null) {
+            return TokenSinEmpresa();
+        }
+
+        var subasta = await _repository.GetByIdAsync(empresaId.Value, id);
+        if (subasta == null) {
+            return Problem(statusCode: 404, title: "Subasta no encontrada", detail: "La subasta no existe.");
+        }
+
+        await _cierreService.AplicarAsync(subasta);
+
+        var totalPujas = await _repository.ContarPujasAsync(subasta.Id);
+
+        return Ok(ToResponse(subasta, totalPujas));
+    }
+
     [HttpPatch("{id:guid}/cancelar")]
     [EndpointSummary("Cancelar una subasta")]
     [EndpointDescription("Rol: Contratante dueño. Solo si está Abierta. Las pujas Activas pasan a Retirada. Otra empresa responde 404.")]
@@ -92,6 +143,8 @@ public class SubastasController : ControllerBase {
         if (subasta == null) {
             return Problem(statusCode: 404, title: "Subasta no encontrada", detail: "La subasta no existe.");
         }
+
+        await _cierreService.AplicarAsync(subasta);
 
         if (subasta.Estado != EstadoSubasta.Abierta) {
             return Problem(statusCode: 409, title: "Transición inválida", detail: "Solo se puede cancelar una subasta Abierta.");
