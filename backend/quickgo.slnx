@@ -3,4 +3,5 @@
   <Project Path="quickgo.Application/quickgo.Application.csproj" />
   <Project Path="quickgo.Domain/quickgo.Domain.csproj" />
   <Project Path="quickgo.Infrastructure/quickgo.Infrastructure.csproj" />
+  <Project Path="quickgo.Tests/quickgo.Tests.csproj" />
 </Solution>
