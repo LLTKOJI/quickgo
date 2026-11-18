@@ -4,17 +4,17 @@ namespace quickgo.Domain.entities;
 
 public class Subasta
 {
-    public int SubastaId { get; set; }
+    public Guid SubastaId { get; set; }
 
     // Empresa contratante dueña de la subasta
-    public int EmpresaId { get; set; }
+    public Guid EmpresaId { get; set; }
     public Empresa? Empresa { get; set; }
 
-    public int TipoVehiculoId { get; set; }
+    public Guid TipoVehiculoId { get; set; }
     public TipoVehiculo? TipoVehiculo { get; set; }
 
-    public int OrigenDireccionId { get; set; }
-    public int DestinoDireccionId { get; set; }
+    public Guid OrigenDireccionId { get; set; }
+    public Guid DestinoDireccionId { get; set; }
 
     public string? Descripcion { get; set; }
     public decimal PesoKg { get; set; }

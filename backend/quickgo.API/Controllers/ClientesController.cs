@@ -1,22 +1,25 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using quickgo.Application.Features.Clientes.DTOs;
 using quickgo.Application.Interfaces;
 using quickgo.Domain.entities;
+using quickgo.Domain.Constants;
 
 namespace quickgo.API.Controllers;
 
 [ApiController]
 [Route("api/clientes")]
-[Authorize(Roles = "Admin,Despachador")]
+[Authorize(Roles = Roles.AdminDespachador)]
 public class ClientesController : ControllerBase {
     private readonly IClienteRepository _repository;
     private readonly IValidator<ClienteRequestDto> _validator;
+    private readonly ITenantContext _tenant;
 
-    public ClientesController(IClienteRepository repository, IValidator<ClienteRequestDto> validator) {
+    public ClientesController(IClienteRepository repository, IValidator<ClienteRequestDto> validator, ITenantContext tenant) {
         _repository = repository;
         _validator = validator;
+        _tenant = tenant;
     }
 
     [HttpGet]
@@ -97,11 +100,7 @@ public class ClientesController : ControllerBase {
     }
 
     private Guid? ObtenerEmpresaId() {
-        var claim = User.FindFirst("empresa_id");
-        if (claim != null && Guid.TryParse(claim.Value, out var empresaId)) {
-            return empresaId;
-        }
-        return null;
+        return _tenant.EmpresaId;
     }
 
     private IActionResult TokenSinEmpresa() {
