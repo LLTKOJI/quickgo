@@ -3,25 +3,27 @@ using quickgo.Domain.entities;
 
 namespace quickgo.Infrastructure.Data;
 
-public class QuickGoDbContext: DbContext
+public class QuickGoDbContext : DbContext
 {
     public QuickGoDbContext(DbContextOptions<QuickGoDbContext> options) : base(options)
     {
-        
     }
-    public DbSet<TipoVehiculo>TipoVehiculos { get; set; }
-    public DbSet<Vehiculo>Vehiculos { get; set; }
-    public DbSet<Empresa>Empresas  { get; set; }
+
+    public DbSet<TipoVehiculo> TipoVehiculos { get; set; }
+    public DbSet<Vehiculo> Vehiculos { get; set; }
+    public DbSet<Empresa> Empresas { get; set; }
     public DbSet<Pais> Paises { get; set; }
     public DbSet<Departamento> Departamentos { get; set; }
     public DbSet<Ciudad> Ciudades { get; set; }
     public DbSet<Moneda> Monedas { get; set; }
     public DbSet<Cliente> Clientes { get; set; }
-    public DbSet<Direccion> Direcciones { get; set; } 
-    public DbSet<Factura> Facturas { get; set; }
-    
-    public DbSet<Envio> Envios { get; set; }
-    public DbSet<Cotizacion> Cotizaciones { get; set; }
-    
-    public DbSet<Pago>  Pagos { get; set; }
+    public DbSet<Direccion> Direcciones { get; set; }
+    public DbSet<Subasta> Subastas { get; set; }
+    public DbSet<Puja> Pujas { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(QuickGoDbContext).Assembly);
+    }
 }
