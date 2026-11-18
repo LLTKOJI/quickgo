@@ -5,9 +5,8 @@ namespace quickgo.Application.Interfaces;
 public interface IEmpresaRepository
 {
     Task<IEnumerable<Empresa>> GetAllEmpresasAsync();
-    Task<Empresa> GetEmpresaAsync(int id);
-    Task<Empresa>AddEmpresaAsync(Empresa empresa);
-    Task<Empresa> UpdateEmpresaAsync(Empresa empresa);
-    Task DeleteEmpresaAsync(int id);
-    
+    Task<Empresa?> GetEmpresaAsync(Guid id);
+    Task<Empresa> AddEmpresaAsync(Empresa empresa);
+    Task<Empresa?> UpdateEmpresaAsync(Empresa empresa);
+    Task<bool> DeleteEmpresaAsync(Guid id);
 }

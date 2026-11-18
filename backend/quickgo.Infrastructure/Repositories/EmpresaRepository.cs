@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using quickgo.Application.Interfaces;
 using quickgo.Domain.entities;
 using quickgo.Infrastructure.Data;
@@ -13,28 +14,52 @@ public class EmpresaRepository : IEmpresaRepository
         _context = context;
     }
 
-    public Task<IEnumerable<Empresa>> GetAllEmpresasAsync()
+    public async Task<IEnumerable<Empresa>> GetAllEmpresasAsync()
     {
-        throw new NotImplementedException();
+        return await _context.Empresas.AsNoTracking().ToListAsync();
     }
 
-    public Task<Empresa> GetEmpresaAsync(int id)
+    public async Task<Empresa?> GetEmpresaAsync(Guid id)
     {
-        throw new NotImplementedException();
+        return await _context.Empresas.FindAsync(id);
     }
 
-    public Task<Empresa> AddEmpresaAsync(Empresa empresa)
+    public async Task<Empresa> AddEmpresaAsync(Empresa empresa)
     {
-        throw new NotImplementedException();
+        await _context.Empresas.AddAsync(empresa);
+        await _context.SaveChangesAsync();
+        return empresa;
     }
 
-    public Task<Empresa> UpdateEmpresaAsync(Empresa empresa)
+    public async Task<Empresa?> UpdateEmpresaAsync(Empresa empresa)
     {
-        throw new NotImplementedException();
+        var existingEmpresa = await _context.Empresas.FindAsync(empresa.EmpresaId);
+        if (existingEmpresa is null)
+        {
+            return null;
+        }
+
+        existingEmpresa.NombreComercial = empresa.NombreComercial;
+        existingEmpresa.RazonSocial = empresa.RazonSocial;
+        existingEmpresa.RTN = empresa.RTN;
+        existingEmpresa.TipoComercial = empresa.TipoComercial;
+        existingEmpresa.Plan = empresa.Plan;
+        existingEmpresa.Activa = empresa.Activa;
+
+        await _context.SaveChangesAsync();
+        return existingEmpresa;
     }
 
-    public Task DeleteEmpresaAsync(int id)
+    public async Task<bool> DeleteEmpresaAsync(Guid id)
     {
-        throw new NotImplementedException();
+        var empresa = await _context.Empresas.FindAsync(id);
+        if (empresa is null)
+        {
+            return false;
+        }
+
+        _context.Empresas.Remove(empresa);
+        await _context.SaveChangesAsync();
+        return true;
     }
 }
