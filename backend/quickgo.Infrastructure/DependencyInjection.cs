@@ -17,6 +17,7 @@ public static class DependencyInjection {
         services.AddScoped<IVehiculoRepository, VehiculoRepository>();
         services.AddScoped<ITipoVehiculoRepository, TipoVehiculoRepository>();
         services.AddScoped<IEmpresaRepository, EmpresaRepository>();
+        services.AddScoped<ISubastaRepository, SubastaRepository>();
 
         return services;
     }
