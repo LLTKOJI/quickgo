@@ -1,12 +1,14 @@
+using quickgo.Domain.enums;
+
 namespace quickgo.Domain.entities;
 
-public class Empresa
-{
-    public int EmpresaId { get; set; }
-    public string NombreComercial  { get; set; } = string.Empty;
+public class Empresa {
+    public Guid Id { get; set; }
+    public string NombreComercial { get; set; } = string.Empty;
     public string RazonSocial { get; set; } = string.Empty;
-    public string RTN { get; set; } =  string.Empty;
-    public string TipoComercial { get; set; } =  string.Empty;
-    public string Plan { get; set; } =  string.Empty;
-    public bool Activa { get; set; }
+    public string Slug { get; set; } = string.Empty;
+    public string Rtn { get; set; } = string.Empty;
+    public TipoEmpresa Tipo { get; set; }
+    public PlanEmpresa? Plan { get; set; }
+    public bool Activa { get; set; } = true;
 }

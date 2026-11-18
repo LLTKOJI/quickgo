@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using quickgo.Application.Interfaces;
 using quickgo.Domain.entities;
 using quickgo.Infrastructure.Data;
@@ -6,35 +7,21 @@ namespace quickgo.Infrastructure.Repositories;
 
 public class EmpresaRepository : IEmpresaRepository
 {
-    private readonly QuickGoDbContext  _context;
+    private readonly QuickGoDbContext _context;
 
     public EmpresaRepository(QuickGoDbContext context)
     {
         _context = context;
     }
 
-    public Task<IEnumerable<Empresa>> GetAllEmpresasAsync()
-    {
-        throw new NotImplementedException();
-    }
+    public Task<Empresa?> GetByIdAsync(Guid id) =>
+        _context.Empresas.FirstOrDefaultAsync(e => e.Id == id);
 
-    public Task<Empresa> GetEmpresaAsync(int id)
-    {
-        throw new NotImplementedException();
-    }
+    public Task<bool> ExisteRtnAsync(string rtn) =>
+        _context.Empresas.AnyAsync(e => e.Rtn == rtn);
 
-    public Task<Empresa> AddEmpresaAsync(Empresa empresa)
-    {
-        throw new NotImplementedException();
-    }
+    public Task<bool> ExisteSlugAsync(string slug) =>
+        _context.Empresas.AnyAsync(e => e.Slug == slug);
 
-    public Task<Empresa> UpdateEmpresaAsync(Empresa empresa)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task DeleteEmpresaAsync(int id)
-    {
-        throw new NotImplementedException();
-    }
+    public void Add(Empresa empresa) => _context.Empresas.Add(empresa);
 }

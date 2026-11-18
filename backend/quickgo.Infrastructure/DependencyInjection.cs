@@ -1,23 +1,32 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using quickgo.Application.Interfaces;
 using quickgo.Infrastructure.Data;
 using quickgo.Infrastructure.Repositories;
+using quickgo.Infrastructure.Security;
 
 namespace quickgo.Infrastructure;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-
 
 public static class DependencyInjection {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString) {
-        
-        // 1. Configuramos el acceso a PostgreSQL
+
+        // 1. Acceso a PostgreSQL
         services.AddDbContext<QuickGoDbContext>(options =>
             options.UseNpgsql(connectionString));
-        
+
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
+
+        // 2. Repositorios
         services.AddScoped<IVehiculoRepository, VehiculoRepository>();
         services.AddScoped<ITipoVehiculoRepository, TipoVehiculoRepository>();
         services.AddScoped<IEmpresaRepository, EmpresaRepository>();
-        services.AddScoped<ISubastaRepository, SubastaRepository>();
+        services.AddScoped<IRolRepository, RolRepository>();
+        services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+        services.AddScoped<IConductorRepository, ConductorRepository>();
+        services.AddScoped<IClienteRepository, ClienteRepository>();
+        services.AddScoped<ICatalogoGeograficoRepository, CatalogoGeograficoRepository>();
+        services.AddScoped<IMonedaRepository, MonedaRepository>();
 
         return services;
     }

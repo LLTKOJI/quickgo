@@ -1,6 +1,6 @@
-﻿namespace quickgo.Domain.entities;
+namespace quickgo.Domain.entities;
 
-public class Cliente {
+public class Cliente : IEmpresaScoped {
     public Guid Id { get; set; }
     public Guid EmpresaId { get; set; }
     public string PrimerNombre { get; set; } = string.Empty;

@@ -2,7 +2,7 @@ namespace quickgo.Domain.entities;
 
 public class TipoVehiculo
 {
-    public int TipoVehiculoId { get; set; }
+    public Guid Id { get; set; }
     public string Nombre {get; set;} = string.Empty;
     public decimal Cantidadkilogramo { get; set; }
     public decimal LargoMetros { get; set; }
