@@ -1,6 +1,7 @@
 using quickgo.Application.Interfaces;
 using quickgo.Infrastructure.Data;
 using quickgo.Infrastructure.Repositories;
+using quickgo.Application.Features.Subastas;
 
 namespace quickgo.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,7 @@ public static class DependencyInjection {
         services.AddScoped<ITipoVehiculoRepository, TipoVehiculoRepository>();
         services.AddScoped<IEmpresaRepository, EmpresaRepository>();
         services.AddScoped<ISubastaRepository, SubastaRepository>();
+        services.AddScoped<SubastaCierreService>();
 
         return services;
     }

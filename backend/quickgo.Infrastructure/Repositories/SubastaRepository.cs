@@ -14,6 +14,7 @@ public class SubastaRepository : ISubastaRepository {
     }
 
     public async Task<bool> TipoVehiculoExisteAsync(Guid tipoVehiculoId) {
+        // TEMPORAL: volver a "t.Id == tipoVehiculoId" cuando TipoVehiculo use Guid e Id
         return await _context.TipoVehiculos.AnyAsync(t => t.TipoVehiculoId.ToString() == tipoVehiculoId.ToString());
     }
 
@@ -58,6 +59,60 @@ public class SubastaRepository : ISubastaRepository {
         }
 
         subasta.Estado = EstadoSubasta.Cancelada;
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<List<Subasta>> ListarPorEmpresaAsync(Guid empresaId, EstadoSubasta? estado) {
+        var query = _context.Subastas
+            .Include(s => s.TipoVehiculo)
+            .Where(s => s.EmpresaId == empresaId);
+
+        if (estado.HasValue) {
+            query = query.Where(s => s.Estado == estado.Value);
+        }
+
+        return await query.OrderByDescending(s => s.FechaCierre).ToListAsync();
+    }
+
+    public async Task<Dictionary<Guid, int>> ContarPujasPorSubastaAsync(IEnumerable<Guid> subastaIds) {
+        var ids = subastaIds.ToList();
+        return await _context.Pujas
+            .IgnoreQueryFilters()
+            .Where(p => ids.Contains(p.SubastaId))
+            .GroupBy(p => p.SubastaId)
+            .Select(g => new { SubastaId = g.Key, Total = g.Count() })
+            .ToDictionaryAsync(x => x.SubastaId, x => x.Total);
+    }
+
+    public async Task<List<Subasta>> ObtenerAbiertasVencidasAsync(Guid empresaId) {
+        var ahora = DateTimeOffset.UtcNow;
+        return await _context.Subastas
+            .Where(s => s.EmpresaId == empresaId
+                        && s.Estado == EstadoSubasta.Abierta
+                        && s.FechaCierre <= ahora)
+            .ToListAsync();
+    }
+
+    public async Task VencerAsync(IEnumerable<Subasta> subastas) {
+        var lista = subastas.ToList();
+        if (lista.Count == 0) return;
+
+        var ids = lista.Select(s => s.Id).ToList();
+
+        var pujasActivas = await _context.Pujas
+            .IgnoreQueryFilters()
+            .Where(p => ids.Contains(p.SubastaId) && p.Estado == EstadoPuja.Activa)
+            .ToListAsync();
+
+        foreach (var puja in pujasActivas) {
+            puja.Estado = EstadoPuja.Perdedora;
+        }
+
+        foreach (var subasta in lista) {
+            subasta.Estado = EstadoSubasta.Vencida;
+        }
+
+        // Un solo SaveChanges: todo se guarda en una transacción
         await _context.SaveChangesAsync();
     }
 }
