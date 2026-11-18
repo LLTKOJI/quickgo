@@ -10,8 +10,8 @@ public class SubastaConfiguration : IEntityTypeConfiguration<Subasta>
     {
         builder.ToTable("subastas");
 
-        builder.HasKey(s => s.SubastaId);
-        builder.Property(s => s.SubastaId).HasColumnName("id");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Id).HasColumnName("id");
 
         builder.Property(s => s.EmpresaId).HasColumnName("empresa_id").IsRequired();
         builder.Property(s => s.TipoVehiculoId).HasColumnName("tipo_vehiculo_id").IsRequired();
@@ -41,7 +41,21 @@ public class SubastaConfiguration : IEntityTypeConfiguration<Subasta>
             .HasForeignKey(s => s.TipoVehiculoId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Índices para las consultas más frecuentes
+        builder.HasOne(s => s.OrigenDireccion)
+            .WithMany()
+            .HasForeignKey(s => s.OrigenDireccionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(s => s.DestinoDireccion)
+            .WithMany()
+            .HasForeignKey(s => s.DestinoDireccionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(s => s.Moneda)
+            .WithMany()
+            .HasForeignKey(s => s.MonedaCodigo)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(s => s.EmpresaId);
         builder.HasIndex(s => new { s.Estado, s.FechaCierre });
     }

@@ -21,6 +21,7 @@ public class Subasta
     public decimal? VolumenM3 { get; set; }
     public decimal PrecioMaximo { get; set; }
     public string MonedaCodigo { get; set; } = string.Empty;
+    public Moneda? Moneda { get; set; }
     public DateTimeOffset FechaCierre { get; set; }
     public EstadoSubasta Estado { get; set; } = EstadoSubasta.Abierta;
 

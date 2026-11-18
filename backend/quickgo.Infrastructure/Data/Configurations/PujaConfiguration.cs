@@ -10,8 +10,8 @@ public class PujaConfiguration : IEntityTypeConfiguration<Puja>
     {
         builder.ToTable("pujas");
 
-        builder.HasKey(p => p.PujaId);
-        builder.Property(p => p.PujaId).HasColumnName("id");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).HasColumnName("id");
 
         builder.Property(p => p.SubastaId).HasColumnName("subasta_id").IsRequired();
         builder.Property(p => p.EmpresaId).HasColumnName("empresa_id").IsRequired();
@@ -36,7 +36,6 @@ public class PujaConfiguration : IEntityTypeConfiguration<Puja>
             .HasForeignKey(p => p.EmpresaId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Una sola puja por empresa y subasta (la base lo garantiza además del 409 del servicio)
         builder.HasIndex(p => new { p.SubastaId, p.EmpresaId }).IsUnique();
     }
 }
