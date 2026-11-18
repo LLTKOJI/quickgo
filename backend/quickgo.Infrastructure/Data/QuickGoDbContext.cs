@@ -1,4 +1,7 @@
+using System.Reflection;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using quickgo.Application.Interfaces;
 using quickgo.Domain.entities;
 using quickgo.Domain.Enums;
 
@@ -6,115 +9,72 @@ namespace quickgo.Infrastructure.Data;
 
 public class QuickGoDbContext : DbContext
 {
-    public QuickGoDbContext(DbContextOptions<QuickGoDbContext> options) : base(options)
-    {
-    }
+    private readonly ITenantContext _tenant;
 
+    public QuickGoDbContext(DbContextOptions<QuickGoDbContext> options, ITenantContext tenant) : base(options)
+    {
+        _tenant = tenant;
+    }
+    
+    public DbSet<Empresa> Empresas { get; set; }
+    public DbSet<Rol> Roles { get; set; }
+    public DbSet<Usuario> Usuarios { get; set; }
+    public DbSet<Conductor> Conductores { get; set; }
+    public DbSet<Pais> Paises { get; set; }
+    public DbSet<Departamento> Departamentos { get; set; }
+    public DbSet<Ciudad> Ciudades { get; set; }
+    public DbSet<Moneda> Monedas { get; set; }
+    public DbSet<Cliente> Clientes { get; set; }
+    public DbSet<Direccion> Direcciones { get; set; }
+    public DbSet<Factura> Facturas { get; set; }
+    public DbSet<Envio> Envios { get; set; }
+    public DbSet<Cotizacion> Cotizaciones { get; set; }
+    public DbSet<Pago> Pagos { get; set; }
+    public DbSet<Subasta> Subastas { get; set; }
+    public DbSet<Puja> Pujas { get; set; }
     public DbSet<TipoVehiculo> TipoVehiculos => Set<TipoVehiculo>();
     public DbSet<Vehiculo> Vehiculos => Set<Vehiculo>();
     public DbSet<DocumentoVehiculo> DocumentosVehiculo => Set<DocumentoVehiculo>();
     public DbSet<AsignacionVehiculoConductor> AsignacionesVehiculoConductor => Set<AsignacionVehiculoConductor>();
     public DbSet<Conductor> Conductores => Set<Conductor>();
-    public DbSet<Usuario> Usuarios => Set<Usuario>();
-    public DbSet<Envio> Envios => Set<Envio>();
-    public DbSet<Empresa> Empresas => Set<Empresa>();
+
+    // Lo leen los filtros globales: se evalua en cada consulta con la empresa del token.
+    // Sin empresa (null) no devuelve nada (falla cerrado).
+    private Guid? EmpresaActualId => _tenant.EmpresaId;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<TipoVehiculo>(entity =>
+        // 1) Nombres snake_case por defecto (tablas y columnas), como en el ERD.
+        //    Las configuraciones explicitas del paso 2 tienen prioridad.
+        foreach (var entity in modelBuilder.Model.GetEntityTypes())
         {
-            entity.ToTable("tipos_vehiculo");
-            entity.HasKey(tipo => tipo.TipoVehiculoId);
-            entity.Property(tipo => tipo.Nombre).HasMaxLength(80).IsRequired();
-            entity.Property(tipo => tipo.Cantidadkilogramo).HasPrecision(12, 2);
-            entity.Property(tipo => tipo.LargoMetros).HasPrecision(8, 2);
-            entity.Property(tipo => tipo.AnchoMetros).HasPrecision(8, 2);
-            entity.Property(tipo => tipo.AlturaMetros).HasPrecision(8, 2);
-            entity.Property(tipo => tipo.VolumenMaximoMetrosCubicos).HasPrecision(12, 2);
-            entity.HasData(TipoVehiculoCatalogo.DatosIniciales);
-        });
+            var tabla = entity.GetTableName();
+            if (tabla is not null)
+            {
+                entity.SetTableName(ASnake(tabla));
+            }
+            foreach (var property in entity.GetProperties())
+            {
+                property.SetColumnName(ASnake(property.Name));
+            }
+        }
 
-        modelBuilder.Entity<Vehiculo>(entity =>
-        {
-            entity.ToTable("vehiculos");
-            entity.HasKey(vehiculo => vehiculo.VehiculoId);
-            entity.Property(vehiculo => vehiculo.Placa).HasMaxLength(20).IsRequired();
-            entity.Property(vehiculo => vehiculo.Vin).HasMaxLength(50);
-            entity.Property(vehiculo => vehiculo.Propiedad).HasConversion<string>().HasMaxLength(20);
-            entity.Property(vehiculo => vehiculo.Estado).HasConversion<string>().HasMaxLength(20);
-            entity.HasIndex(vehiculo => new { vehiculo.EmpresaId, vehiculo.Placa }).IsUnique();
-            entity.HasOne(vehiculo => vehiculo.TipoVehiculo)
-                .WithMany(tipo => tipo.Vehiculos)
-                .HasForeignKey(vehiculo => vehiculo.TipoVehiculoId)
-                .OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne<Empresa>()
-                .WithMany()
-                .HasForeignKey(vehiculo => vehiculo.EmpresaId)
-                .OnDelete(DeleteBehavior.Restrict);
-        });
+        // 2) Configuraciones por entidad (IEntityTypeConfiguration)
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(QuickGoDbContext).Assembly);
 
-        modelBuilder.Entity<DocumentoVehiculo>(entity =>
+        // 3) Filtro global por empresa_id para toda entidad IEmpresaScoped
+        var metodo = typeof(QuickGoDbContext).GetMethod(nameof(AplicarFiltroEmpresa),
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        foreach (var entity in modelBuilder.Model.GetEntityTypes()
+                     .Where(t => typeof(IEmpresaScoped).IsAssignableFrom(t.ClrType)))
         {
-            entity.ToTable("documentos_vehiculo");
-            entity.HasKey(documento => documento.Id);
-            entity.Property(documento => documento.Tipo).HasConversion<string>().HasMaxLength(20);
-            entity.Property(documento => documento.Numero).HasMaxLength(80).IsRequired();
-            entity.HasOne(documento => documento.Vehiculo)
-                .WithMany(vehiculo => vehiculo.Documentos)
-                .HasForeignKey(documento => documento.VehiculoId)
-                .OnDelete(DeleteBehavior.Restrict);
-        });
+            metodo.MakeGenericMethod(entity.ClrType).Invoke(this, new object[] { modelBuilder });
+        }
+    }
 
-        modelBuilder.Entity<Usuario>(entity =>
-        {
-            entity.ToTable("usuarios");
-            entity.HasKey(usuario => usuario.Id);
-            entity.Property(usuario => usuario.Nombre).HasMaxLength(100).IsRequired();
-            entity.Property(usuario => usuario.Apellido).HasMaxLength(100).IsRequired();
-        });
-
-        modelBuilder.Entity<Conductor>(entity =>
-        {
-            entity.ToTable("conductores");
-            entity.HasKey(conductor => conductor.Id);
-            entity.HasIndex(conductor => new { conductor.EmpresaId, conductor.UsuarioId }).IsUnique();
-            entity.HasOne(conductor => conductor.Usuario)
-                .WithOne(usuario => usuario.Conductor)
-                .HasForeignKey<Conductor>(conductor => conductor.UsuarioId)
-                .OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne<Empresa>()
-                .WithMany()
-                .HasForeignKey(conductor => conductor.EmpresaId)
-                .OnDelete(DeleteBehavior.Restrict);
-        });
-
-        modelBuilder.Entity<AsignacionVehiculoConductor>(entity =>
-        {
-            entity.ToTable("asignaciones_vehiculo_conductor");
-            entity.HasKey(asignacion => asignacion.Id);
-            entity.HasIndex(asignacion => new { asignacion.EmpresaId, asignacion.VehiculoId })
-                .IsUnique()
-                .HasFilter("\"FechaFin\" IS NULL");
-            entity.HasOne(asignacion => asignacion.Vehiculo)
-                .WithMany(vehiculo => vehiculo.Asignaciones)
-                .HasForeignKey(asignacion => asignacion.VehiculoId)
-                .OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne(asignacion => asignacion.Conductor)
-                .WithMany(conductor => conductor.Asignaciones)
-                .HasForeignKey(asignacion => asignacion.ConductorId)
-                .OnDelete(DeleteBehavior.Restrict);
-        });
-
-        modelBuilder.Entity<Envio>(entity =>
-        {
-            entity.ToTable("envios");
-            entity.HasKey(envio => envio.Id);
-            entity.Property(envio => envio.Estado).HasConversion<string>().HasMaxLength(20);
-            entity.HasIndex(envio => new { envio.EmpresaId, envio.VehiculoId, envio.Estado });
-            entity.HasOne(envio => envio.Vehiculo)
-                .WithMany(vehiculo => vehiculo.Envios)
-                .HasForeignKey(envio => envio.VehiculoId)
-                .OnDelete(DeleteBehavior.Restrict);
-        });
+    private void AplicarFiltroEmpresa<T>(ModelBuilder modelBuilder) where T : class, IEmpresaScoped
+    {
+    }
+    
     }
 }

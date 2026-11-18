@@ -7,7 +7,7 @@ namespace quickgo.Infrastructure.Repositories;
 
 public class EmpresaRepository : IEmpresaRepository
 {
-    private readonly QuickGoDbContext  _context;
+    private readonly QuickGoDbContext _context;
 
     public EmpresaRepository(QuickGoDbContext context)
     {
@@ -17,11 +17,6 @@ public class EmpresaRepository : IEmpresaRepository
     public async Task<IEnumerable<Empresa>> GetAllEmpresasAsync()
     {
         return await _context.Empresas.AsNoTracking().ToListAsync();
-    }
-
-    public async Task<Empresa?> GetEmpresaAsync(Guid id)
-    {
-        return await _context.Empresas.FindAsync(id);
     }
 
     public async Task<Empresa> AddEmpresaAsync(Empresa empresa)
@@ -62,4 +57,13 @@ public class EmpresaRepository : IEmpresaRepository
         await _context.SaveChangesAsync();
         return true;
     }
+
+    public Task<Empresa?> GetByIdAsync(Guid id) =>
+        _context.Empresas.FirstOrDefaultAsync(e => e.Id == id);
+
+    public Task<bool> ExisteRtnAsync(string rtn) =>
+        _context.Empresas.AnyAsync(e => e.Rtn == rtn);
+
+    public Task<bool> ExisteSlugAsync(string slug) =>
+        _context.Empresas.AnyAsync(e => e.Slug == slug);
 }

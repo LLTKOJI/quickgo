@@ -2,7 +2,7 @@ using quickgo.Domain.Enums;
 
 namespace quickgo.Domain.entities;
 
-public class Vehiculo
+public class Vehiculo : IEmpresaScoped
 {
     public Guid VehiculoId { get; set; }
     public Guid EmpresaId { get; set; }

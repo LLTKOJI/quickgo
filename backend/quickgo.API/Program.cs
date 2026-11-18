@@ -1,8 +1,12 @@
+using System.Text.Json.Serialization;
 using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 using quickgo.Infrastructure;
 using quickgo.Infrastructure.Data;
+using quickgo.API.Security;
+using quickgo.Application;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), ".env")))
@@ -14,7 +18,30 @@ var connectionString = builder.Configuration.GetConnectionString("PostgresConnec
                        ?? Environment.GetEnvironmentVariable("ConnectionStrings__PostgresConnection")
                        ?? throw new InvalidOperationException("Falta la cadena de conexión.");
 
+
+
+// Carga el .env (si existe) ANTES de crear el builder para que la configuración lo vea.
+try
+{
+    Env.TraversePath().Load();
+}
+catch (FileNotFoundException)
+{
+    // Sin .env: se usan las variables de entorno del sistema.
+}
+
+
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure(connectionString);
+builder.Services.AddQuickGoAuth(builder.Configuration, builder.Environment);
+builder.Services.AddHostedService<MigracionesHostedService>();
+builder.Services.AddOpenApi();
+builder.Services.AddProblemDetails();
+
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+        // Los enums viajan como texto con el nombre exacto de cada valor
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services
     .AddControllers()
@@ -23,31 +50,23 @@ builder.Services
 
 var app = builder.Build();
 
-await using (var scope = app.Services.CreateAsyncScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<QuickGoDbContext>();
-    await dbContext.Database.EnsureCreatedAsync();
-    if (!await dbContext.TipoVehiculos.AnyAsync())
-    {
-        await dbContext.TipoVehiculos.AddRangeAsync(TipoVehiculoCatalogo.DatosIniciales.Select(tipo =>
-            new quickgo.Domain.entities.TipoVehiculo
-            {
-                TipoVehiculoId = tipo.TipoVehiculoId,
-                Nombre = tipo.Nombre,
-                Cantidadkilogramo = tipo.Cantidadkilogramo,
-                LargoMetros = tipo.LargoMetros,
-                AnchoMetros = tipo.AnchoMetros,
-                AlturaMetros = tipo.AlturaMetros,
-                VolumenMaximoMetrosCubicos = tipo.VolumenMaximoMetrosCubicos
-            }));
-        await dbContext.SaveChangesAsync();
-    }
-}
 
 app.MapGet("/health", async (QuickGoDbContext dbContext, CancellationToken cancellationToken) =>
     await dbContext.Database.CanConnectAsync(cancellationToken)
         ? Results.Ok(new { status = "Healthy" })
         : Results.StatusCode(StatusCodes.Status503ServiceUnavailable));
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
+else
+{
+    app.UseExceptionHandler();
+}
 
+app.UseStatusCodePages(); // 401, 403 y 404 también salen como ProblemDetails
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 app.Run();

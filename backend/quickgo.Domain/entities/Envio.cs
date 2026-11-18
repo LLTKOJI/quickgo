@@ -8,5 +8,6 @@ public class Envio
     public Guid EmpresaId { get; set; }
     public Guid VehiculoId { get; set; }
     public EstadoEnvio Estado { get; set; }
-    public Vehiculo Vehiculo { get; set; } = null!;
+    public decimal Tarifa { get; set; }
+    public Guid VehiculoId { get; set; }
 }
