@@ -145,8 +145,8 @@ public class FacturasController : ControllerBase {
     [HttpPost("{id:guid}/pagos")]
     [Authorize(Roles = "Admin")]
     [EndpointSummary("Registrar un pago")]
-    [EndpointDescription("Roles: Admin. Método Efectivo, Transferencia o Tarjeta. El monto debe ser mayor que 0 y no exceder el saldo. Si los pagos completan el total, la factura pasa a Pagada en la misma transacción.")]
-    [ProducesResponseType(typeof(FacturaDetalleResponseDto), StatusCodes.Status201Created)]
+    [EndpointDescription("Roles: Admin. Método Efectivo, Transferencia o Tarjeta. El monto debe ser mayor que 0 y no exceder el saldo. Si los pagos completan el total, la factura pasa a Pagada en la misma transacción. Responde el pago registrado con saldoRestante y estadoFactura.")]
+    [ProducesResponseType(typeof(RegistrarPagoResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -193,9 +193,17 @@ public class FacturasController : ControllerBase {
 
         await _repository.AgregarPagoAsync(factura, pago);
 
-        var facturaActualizada = await _repository.GetByIdAsync(empresaId.Value, id);
+        var respuesta = new RegistrarPagoResponseDto {
+            Id = pago.Id,
+            FacturaId = factura.Id,
+            Metodo = pago.Metodo,
+            Monto = pago.Monto,
+            FechaPago = pago.FechaPago,
+            SaldoRestante = saldo - pago.Monto,
+            EstadoFactura = factura.Estado
+        };
 
-        return CreatedAtAction(nameof(GetFactura), new { id }, ToDetalle(facturaActualizada!));
+        return CreatedAtAction(nameof(GetFactura), new { id }, respuesta);
     }
 
     private Guid? ObtenerEmpresaId() {
