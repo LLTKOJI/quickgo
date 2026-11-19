@@ -3,7 +3,6 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using quickgo.Application.Interfaces;
 using quickgo.Domain.entities;
-using quickgo.Domain.Enums;
 
 namespace quickgo.Infrastructure.Data;
 
@@ -15,7 +14,7 @@ public class QuickGoDbContext : DbContext
     {
         _tenant = tenant;
     }
-    
+
     public DbSet<Empresa> Empresas { get; set; }
     public DbSet<Rol> Roles { get; set; }
     public DbSet<Usuario> Usuarios { get; set; }
@@ -29,6 +28,7 @@ public class QuickGoDbContext : DbContext
     public DbSet<Factura> Facturas { get; set; }
     public DbSet<Envio> Envios { get; set; }
     public DbSet<Cotizacion> Cotizaciones { get; set; }
+    public DbSet<SeguimientoEnvio> SeguimientosEnvio { get; set; }
     public DbSet<Pago> Pagos { get; set; }
     public DbSet<Subasta> Subastas { get; set; }
     public DbSet<Puja> Pujas { get; set; }
@@ -36,7 +36,6 @@ public class QuickGoDbContext : DbContext
     public DbSet<Vehiculo> Vehiculos => Set<Vehiculo>();
     public DbSet<DocumentoVehiculo> DocumentosVehiculo => Set<DocumentoVehiculo>();
     public DbSet<AsignacionVehiculoConductor> AsignacionesVehiculoConductor => Set<AsignacionVehiculoConductor>();
-    public DbSet<Conductor> Conductores => Set<Conductor>();
 
     // Lo leen los filtros globales: se evalua en cada consulta con la empresa del token.
     // Sin empresa (null) no devuelve nada (falla cerrado).
@@ -74,7 +73,39 @@ public class QuickGoDbContext : DbContext
 
     private void AplicarFiltroEmpresa<T>(ModelBuilder modelBuilder) where T : class, IEmpresaScoped
     {
+        modelBuilder.Entity<T>().HasQueryFilter(e =>
+            EmpresaActualId != null && e.EmpresaId == EmpresaActualId);
     }
-    
+
+    // Al insertar, la empresa sale siempre del token (se ignora la que traiga el cuerpo).
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        AsignarEmpresaAlInsertar();
+        return base.SaveChangesAsync(cancellationToken);
     }
+
+    public override int SaveChanges()
+    {
+        AsignarEmpresaAlInsertar();
+        return base.SaveChanges();
+    }
+
+    private void AsignarEmpresaAlInsertar()
+    {
+        if (EmpresaActualId is not Guid empresaId)
+        {
+            return;
+        }
+
+        // Solo si no viene empresa: asi la adjudicacion de subasta (B5-05) puede insertar
+        // filas en la empresa ganadora sin que se las cambien.
+        foreach (var entry in ChangeTracker.Entries<IEmpresaScoped>()
+                     .Where(e => e.State == EntityState.Added && e.Entity.EmpresaId == Guid.Empty))
+        {
+            entry.Entity.EmpresaId = empresaId;
+        }
+    }
+
+    private static string ASnake(string nombre) =>
+        Regex.Replace(nombre, "([a-z0-9])([A-Z])", "$1_$2").ToLowerInvariant();
 }

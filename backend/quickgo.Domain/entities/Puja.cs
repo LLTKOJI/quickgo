@@ -4,7 +4,7 @@ namespace quickgo.Domain.entities;
 
 public class Puja
 {
-    public Guid PujaId { get; set; }
+    public Guid Id { get; set; }
 
     public Guid SubastaId { get; set; }
     public Subasta? Subasta { get; set; }

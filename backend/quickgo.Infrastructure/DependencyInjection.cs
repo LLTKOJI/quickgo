@@ -8,8 +8,10 @@ using quickgo.Infrastructure.Security;
 
 namespace quickgo.Infrastructure;
 
-public static class DependencyInjection {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString) {
+public static class DependencyInjection
+{
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString)
+    {
 
         // 1. Acceso a PostgreSQL
         services.AddDbContext<QuickGoDbContext>(options =>
@@ -19,6 +21,8 @@ public static class DependencyInjection {
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 
         // 2. Repositorios
+        services.AddScoped<IDireccionRepository, DireccionRepository>();
+        services.AddScoped<IFacturaRepository, FacturaRepository>();
         services.AddScoped<IVehiculoRepository, VehiculoRepository>();
         services.AddScoped<ITipoVehiculoRepository, TipoVehiculoRepository>();
         services.AddScoped<IDocumentoVehiculoRepository, DocumentoVehiculoRepository>();

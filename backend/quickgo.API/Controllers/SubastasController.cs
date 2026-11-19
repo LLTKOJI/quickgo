@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using quickgo.API.Security;
 using quickgo.Application.Features.Subastas;
 using quickgo.Application.Features.Subastas.DTOs;
 using quickgo.Application.Interfaces;
@@ -157,7 +158,7 @@ public class SubastasController : ControllerBase {
     }
 
     private Guid? ObtenerEmpresaId() {
-        var claim = User.FindFirst("empresa_id");
+        var claim = User.FindFirst(ClaimNames.EmpresaId);
         if (claim != null && Guid.TryParse(claim.Value, out var empresaId)) {
             return empresaId;
         }

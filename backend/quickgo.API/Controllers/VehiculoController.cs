@@ -183,7 +183,7 @@ public class VehiculoController : TenantControllerBase
             return Unauthorized();
         }
 
-        if (!HasAnyRole("Admin", "Despachador"))
+        if (!HasAnyRole("Admin"))
         {
             return Forbid();
         }

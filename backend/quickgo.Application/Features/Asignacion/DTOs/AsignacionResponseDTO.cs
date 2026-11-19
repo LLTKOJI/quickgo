@@ -9,4 +9,5 @@ public class AsignacionResponseDTO
     public string NombreConductor { get; set; } = string.Empty;
     public DateTime FechaInicio { get; set; }
     public DateTime? FechaFin { get; set; }
+    public bool Vigente { get; set; }
 }
