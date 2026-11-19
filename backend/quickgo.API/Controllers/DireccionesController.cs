@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using quickgo.API.Security;
 using quickgo.Application.Features.Direcciones.DTOs;
 using quickgo.Application.Interfaces;
 using quickgo.Domain.entities;
@@ -123,7 +124,7 @@ public class DireccionesController : ControllerBase {
     }
 
     private Guid? ObtenerEmpresaId() {
-        var claim = User.FindFirst("empresa_id");
+        var claim = User.FindFirst(ClaimNames.EmpresaId);
         if (claim != null && Guid.TryParse(claim.Value, out var empresaId)) {
             return empresaId;
         }

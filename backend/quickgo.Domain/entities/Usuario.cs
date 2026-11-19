@@ -1,12 +1,11 @@
 namespace quickgo.Domain.entities;
 
-public class Usuario {
+public class Usuario : IEmpresaScoped {
     public Guid Id { get; set; }
     public Guid EmpresaId { get; set; }
     public Empresa? Empresa { get; set; }
     public Guid RolId { get; set; }
     public Rol? Rol { get; set; }
-    public Guid ConductorId { get; set; }
     public string PrimerNombre { get; set; } = string.Empty;
     public string? SegundoNombre { get; set; }
     public string PrimerApellido { get; set; } = string.Empty;

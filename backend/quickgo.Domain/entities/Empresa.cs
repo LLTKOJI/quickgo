@@ -4,8 +4,8 @@ namespace quickgo.Domain.entities;
 
 public class Empresa
 {
-    public Guid EmpresaId { get; set; }
-    public string NombreComercial  { get; set; } = string.Empty;
+    public Guid Id { get; set; }
+    public string NombreComercial { get; set; } = string.Empty;
     public string RazonSocial { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public string Rtn { get; set; } = string.Empty;

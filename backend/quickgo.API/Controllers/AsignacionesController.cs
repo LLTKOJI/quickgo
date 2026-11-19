@@ -120,9 +120,10 @@ public class AsignacionesController : TenantControllerBase
             VehiculoId = asignacion.VehiculoId,
             Placa = asignacion.Vehiculo.Placa,
             ConductorId = asignacion.ConductorId,
-            NombreConductor = $"{asignacion.Conductor.Usuario.Nombre} {asignacion.Conductor.Usuario.Apellido}".Trim(),
+            NombreConductor = asignacion.Conductor.Usuario?.NombreCompleto ?? string.Empty,
             FechaInicio = asignacion.FechaInicio,
-            FechaFin = asignacion.FechaFin
+            FechaFin = asignacion.FechaFin,
+            Vigente = asignacion.FechaFin == null
         };
     }
 }

@@ -1,6 +1,7 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using quickgo.API.Security;
 using quickgo.Application.Features.Facturas.DTOs;
 using quickgo.Application.Interfaces;
 using quickgo.Domain.enums;
@@ -54,7 +55,7 @@ public class FacturasController : ControllerBase {
             return Problem(statusCode: 404, title: "Envío no encontrado", detail: "El envío no existe.");
         }
 
-        if (envio.Estado != "Completado") {
+        if (envio.Estado != quickgo.Domain.Enums.EstadoEnvio.Completado) {
             return Problem(statusCode: 409, title: "Envío no completado", detail: "Solo se puede facturar un envío Completado.");
         }
 
@@ -198,7 +199,7 @@ public class FacturasController : ControllerBase {
     }
 
     private Guid? ObtenerEmpresaId() {
-        var claim = User.FindFirst("empresa_id");
+        var claim = User.FindFirst(ClaimNames.EmpresaId);
         if (claim != null && Guid.TryParse(claim.Value, out var empresaId)) {
             return empresaId;
         }

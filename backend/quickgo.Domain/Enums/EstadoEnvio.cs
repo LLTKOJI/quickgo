@@ -2,8 +2,9 @@ namespace quickgo.Domain.Enums;
 
 public enum EstadoEnvio
 {
+    Pendiente,
     Asignado,
     EnCurso,
-    Finalizado,
+    Completado,
     Cancelado
 }

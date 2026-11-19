@@ -2,9 +2,10 @@ using quickgo.Domain.Enums;
 
 namespace quickgo.Domain.entities;
 
-public class DocumentoVehiculo
+public class DocumentoVehiculo : IEmpresaScoped
 {
     public Guid Id { get; set; }
+    public Guid EmpresaId { get; set; }
     public Guid VehiculoId { get; set; }
     public TipoDocumento Tipo { get; set; }
     public string Numero { get; set; } = string.Empty;

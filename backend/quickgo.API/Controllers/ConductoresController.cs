@@ -9,8 +9,11 @@ using quickgo.Domain.Constants;
 namespace quickgo.API.Controllers;
 
 
+[ApiController]
+[Route("api/conductores")]
 [Authorize]
-public class ConductoresController : ApiControllerBase {
+public class ConductoresController : ApiControllerBase
+{
     private readonly ConductorService _service;
     private readonly IValidator<CrearConductorRequest> _crearValidator;
     private readonly IValidator<ActualizarConductorRequest> _actualizarValidator;
@@ -19,7 +22,8 @@ public class ConductoresController : ApiControllerBase {
     public ConductoresController(ConductorService service,
         IValidator<CrearConductorRequest> crearValidator,
         IValidator<ActualizarConductorRequest> actualizarValidator,
-        IValidator<LicenciasPorVencerQuery> vencerValidator) {
+        IValidator<LicenciasPorVencerQuery> vencerValidator)
+    {
         _service = service;
         _crearValidator = crearValidator;
         _actualizarValidator = actualizarValidator;
@@ -35,7 +39,8 @@ public class ConductoresController : ApiControllerBase {
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Crear([FromBody] CrearConductorRequest request) {
+    public async Task<IActionResult> Crear([FromBody] CrearConductorRequest request)
+    {
         var invalido = await ValidarAsync(_crearValidator, request);
         if (invalido is not null) return invalido;
 
@@ -49,7 +54,8 @@ public class ConductoresController : ApiControllerBase {
     [ProducesResponseType(typeof(IEnumerable<ConductorResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Listar([FromQuery] ConductorFiltroQuery filtro) {
+    public async Task<IActionResult> Listar([FromQuery] ConductorFiltroQuery filtro)
+    {
         return Ok(await _service.ListarAsync(filtro));
     }
 
@@ -62,7 +68,8 @@ public class ConductoresController : ApiControllerBase {
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> LicenciasPorVencer([FromQuery] LicenciasPorVencerQuery query) {
+    public async Task<IActionResult> LicenciasPorVencer([FromQuery] LicenciasPorVencerQuery query)
+    {
         var invalido = await ValidarAsync(_vencerValidator, query);
         if (invalido is not null) return invalido;
 
@@ -77,7 +84,8 @@ public class ConductoresController : ApiControllerBase {
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Obtener(Guid id) {
+    public async Task<IActionResult> Obtener(Guid id)
+    {
         return Responder(await _service.ObtenerAsync(id));
     }
 
@@ -91,7 +99,8 @@ public class ConductoresController : ApiControllerBase {
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Editar(Guid id, [FromBody] ActualizarConductorRequest request) {
+    public async Task<IActionResult> Editar(Guid id, [FromBody] ActualizarConductorRequest request)
+    {
         var invalido = await ValidarAsync(_actualizarValidator, request);
         if (invalido is not null) return invalido;
 

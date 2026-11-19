@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
@@ -7,18 +6,6 @@ using quickgo.Infrastructure.Data;
 using quickgo.API.Security;
 using quickgo.Application;
 using Scalar.AspNetCore;
-
-var builder = WebApplication.CreateBuilder(args);
-if (File.Exists(Path.Combine(Directory.GetCurrentDirectory(), ".env")))
-{
-    Env.Load();
-}
-
-var connectionString = builder.Configuration.GetConnectionString("PostgresConnection")
-                       ?? Environment.GetEnvironmentVariable("ConnectionStrings__PostgresConnection")
-                       ?? throw new InvalidOperationException("Falta la cadena de conexión.");
-
-
 
 // Carga el .env (si existe) ANTES de crear el builder para que la configuración lo vea.
 try
@@ -29,6 +16,13 @@ catch (FileNotFoundException)
 {
     // Sin .env: se usan las variables de entorno del sistema.
 }
+
+var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString("PostgresConnection")
+                       ?? Environment.GetEnvironmentVariable("ConnectionStrings__PostgresConnection")
+                       ?? throw new InvalidOperationException("Falta la cadena de conexión.");
+
 
 
 builder.Services.AddApplication();
@@ -41,11 +35,6 @@ builder.Services.AddProblemDetails();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
         // Los enums viajan como texto con el nombre exacto de cada valor
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
-
-builder.Services
-    .AddControllers()
-    .AddJsonOptions(options =>
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 var app = builder.Build();

@@ -22,7 +22,7 @@ public class AsignacionRepository : IAsignacionRepository
         CancellationToken cancellationToken = default)
     {
         return await _context.Conductores
-            .Where(conductor => conductor.EmpresaId == empresaId && conductor.UsuarioId == usuarioId)
+            .Where(conductor => conductor.EmpresaId == empresaId && conductor.Id == usuarioId)
             .Select(conductor => (Guid?)conductor.Id)
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -58,7 +58,7 @@ public class AsignacionRepository : IAsignacionRepository
             return CrearAsignacionResult.ConductorNotFound;
         }
 
-        if (!conductor.Activo || !conductor.Usuario.Activo)
+        if (conductor.Estado != quickgo.Domain.enums.EstadoConductor.Activo)
         {
             return CrearAsignacionResult.ConductorInactive;
         }
