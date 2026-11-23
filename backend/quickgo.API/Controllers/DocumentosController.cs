@@ -17,6 +17,11 @@ public class DocumentosController : TenantControllerBase
     }
 
     [HttpGet("por-vencer")]
+    [EndpointSummary("Listar documentos por vencer")]
+    [EndpointDescription("Roles: Admin, Despachador. Devuelve documentos de vehiculos de la empresa que vencen en los proximos N dias. Query: dias (default 30).")]
+    [ProducesResponseType(typeof(IEnumerable<DocumentoPorVencerResponseDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetPorVencer(
         [FromQuery] DocumentosPorVencerQuery query,
         CancellationToken cancellationToken)

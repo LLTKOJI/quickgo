@@ -193,20 +193,26 @@ namespace quickgo.Infrastructure.Data.Migrations
 
                     b.Property<string>("MonedaCodigo")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
                         .HasColumnName("moneda_codigo");
 
                     b.Property<decimal>("Monto")
-                        .HasColumnType("numeric")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
                         .HasColumnName("monto");
 
-                    b.Property<DateTime>("ValidaHasta")
+                    b.Property<DateTimeOffset>("ValidaHasta")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("valida_hasta");
 
                     b.HasKey("Id");
 
-                    b.ToTable("cotizaciones");
+                    b.HasIndex("EnvioId");
+
+                    b.HasIndex("MonedaCodigo");
+
+                    b.ToTable("cotizaciones", (string)null);
                 });
 
             modelBuilder.Entity("quickgo.Domain.entities.Departamento", b =>
@@ -514,6 +520,20 @@ namespace quickgo.Infrastructure.Data.Migrations
                     b.HasKey("Codigo");
 
                     b.ToTable("monedas", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Codigo = "HNL",
+                            Nombre = "Lempira",
+                            Simbolo = "L"
+                        },
+                        new
+                        {
+                            Codigo = "USD",
+                            Nombre = "Dólar estadounidense",
+                            Simbolo = "$"
+                        });
                 });
 
             modelBuilder.Entity("quickgo.Domain.entities.Pago", b =>
@@ -571,6 +591,14 @@ namespace quickgo.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("paises");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("11111111-0000-0000-0000-000000000001"),
+                            CodigoIso = "HND",
+                            Nombre = "Honduras"
+                        });
                 });
 
             modelBuilder.Entity("quickgo.Domain.entities.Puja", b =>
@@ -1031,6 +1059,21 @@ namespace quickgo.Infrastructure.Data.Migrations
                     b.Navigation("Empresa");
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("quickgo.Domain.entities.Cotizacion", b =>
+                {
+                    b.HasOne("quickgo.Domain.entities.Envio", null)
+                        .WithMany()
+                        .HasForeignKey("EnvioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("quickgo.Domain.entities.Moneda", null)
+                        .WithMany()
+                        .HasForeignKey("MonedaCodigo")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("quickgo.Domain.entities.Direccion", b =>

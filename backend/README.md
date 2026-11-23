@@ -1,17 +1,17 @@
-# QuickGo – Backend
+# QuickGo - Backend
 
 API REST en **.NET 10** con **PostgreSQL**. Organizada por capas:
 
 ```
 backend/
-├── quickgo.Domain/          Entidades, enumeraciones y constantes (Roles). Sin dependencias.
-├── quickgo.Application/     Servicios, DTOs, validadores (FluentValidation) e interfaces de repositorio.
-├── quickgo.Infrastructure/  EF Core (DbContext, configuraciones, migraciones), repositorios, hash de contraseñas.
-├── quickgo.API/             Controllers, JWT, filtro por empresa, Program.cs.
-├── quickgo.Tests/           Pruebas xUnit (aislamiento entre empresas, roles, conductores).
-├── probar-todo.ps1          Prueba HTTP de punta a punta de todas las historias existentes.
-├── global.json              Fija la versión del SDK (10.0.401).
-└── quickgo.slnx             Solución.
+|-- quickgo.Domain/          Entidades, enumeraciones y constantes (Roles). Sin dependencias.
+|-- quickgo.Application/     Servicios, DTOs, validadores (FluentValidation) e interfaces de repositorio.
+|-- quickgo.Infrastructure/  EF Core (DbContext, configuraciones, migraciones), repositorios, hash de contrasenas.
+|-- quickgo.API/             Controllers, JWT, filtro por empresa, Program.cs.
+|-- quickgo.Tests/           Pruebas xUnit (aislamiento entre empresas, roles, conductores).
+|-- probar-todo.ps1          Prueba HTTP de punta a punta de todas las historias existentes.
+|-- global.json              Fija la version del SDK (10.0.401).
+\-- quickgo.slnx             Solucion.
 ```
 
 ## Requisitos
@@ -23,7 +23,7 @@ backend/
 ## Puesta en marcha
 
 ```bash
-# 1) PostgreSQL (desde la raíz del repo)
+# 1) PostgreSQL (desde la raiz del repo)
 cd infra
 cp .env.example .env
 docker compose up -d            # Postgres 16 en localhost:5433
@@ -37,34 +37,34 @@ cd ..
 dotnet run --project quickgo.API    # http://localhost:5010
 ```
 
-Al iniciar, si `MigrarAlIniciar=true`, la API aplica las migraciones pendientes (`MigracionesHostedService`). La migración inicial ya está en el repo (`quickgo.Infrastructure/Data/Migrations`).
+Al iniciar, si `MigrarAlIniciar=true`, la API aplica las migraciones pendientes (`MigracionesHostedService`). Las migraciones estan en `quickgo.Infrastructure/Data/Migrations`.
 
 ### Variables de entorno
 
 Se leen del archivo `quickgo.API/.env` (no se sube a git) o de variables del sistema.
 
-| Variable | Descripción |
+| Variable | Descripcion |
 |---|---|
-| `ConnectionStrings__PostgresConnection` | Cadena de conexión. Debe coincidir con `infra/.env` (puerto **5433**). |
-| `Jwt__Key` | Clave de firma del JWT, **mínimo 32 caracteres**. Obligatoria fuera de Development. |
-| `Jwt__ExpiraMinutos` | Duración del token (60 por defecto). |
+| `ConnectionStrings__PostgresConnection` | Cadena de conexion. Debe coincidir con `infra/.env` (puerto **5433** por defecto del repo). |
+| `Jwt__Key` | Clave de firma del JWT, **minimo 32 caracteres**. Obligatoria fuera de Development. |
+| `Jwt__ExpiraMinutos` | Duracion del token (60 por defecto). |
 | `MigrarAlIniciar` | `true` aplica migraciones al arrancar. En `appsettings.json` es `false`; en Development es `true`. |
 
-`appsettings.Development.json` trae una clave JWT de desarrollo; **nunca la uses en producción**.
+`appsettings.Development.json` trae una clave JWT de desarrollo; **nunca la uses en produccion**.
 
 ## Datos iniciales (seed)
 
-La migración ya incluye: los **4 roles** y el catálogo de **tipos de vehículo**.
+Las migraciones incluyen: los **4 roles**, el catalogo de **tipos de vehiculo**, **Honduras** (`HND`) y las monedas **HNL** y **USD**.
 
-**No** incluye países, departamentos, ciudades ni monedas. Para probar catálogos y direcciones hay que insertarlos; el bloque SQL del paso 0 de `probar-todo.ps1` carga Honduras (Francisco Morazán y Cortés, Tegucigalpa y San Pedro Sula) y las monedas HNL y USD.
+**No** incluye departamentos ni ciudades. Para probar direcciones hay que insertarlos; el bloque SQL del paso 0 de `probar-todo.ps1` carga Francisco Morazan y Cortes, Tegucigalpa y San Pedro Sula.
 
 ## Seguridad y multi-empresa
 
 - Login con JWT. El token lleva los claims `userId`, `empresaId`, `rol` y `tipoEmpresa`.
-- Ningún endpoint recibe `EmpresaId` en el cuerpo: sale del token. Si el cliente lo envía, se ignora.
+- Ningun endpoint recibe `EmpresaId` en el cuerpo: sale del token. Si el cliente lo envia, se ignora.
 - Las entidades con `EmpresaId` (`IEmpresaScoped`) tienen un **filtro global** en el `DbContext`: una empresa nunca ve ni modifica datos de otra (responde 404).
 - Roles: `Admin`, `Despachador`, `Conductor` (empresas Transportista) y `Contratante` (empresas Contratante).
-- Errores en formato `ProblemDetails`: 400 validación, 401 sin token, 403 rol no permitido, 404 no encontrado/otra empresa, 409 conflicto.
+- Errores en formato `ProblemDetails`: 400 validacion, 401 sin token, 403 rol no permitido, 404 no encontrado/otra empresa, 409 conflicto.
 
 ### Modo Dev (solo `ASPNETCORE_ENVIRONMENT=Development`)
 
@@ -72,23 +72,24 @@ Permite probar sin login enviando los headers `X-Empresa-Id`, `X-User-Id`, `X-Ro
 
 ## Endpoints
 
-Rutas bajo `/api`. “Todos” = cualquier usuario autenticado.
+Rutas bajo `/api`. "Todos" = cualquier usuario autenticado.
 
 ### Identidad (B1)
 
-| Método y ruta | Roles |
+| Metodo y ruta | Roles |
 |---|---|
-| `POST /empresas/registro` | público |
-| `POST /auth/login` | público |
+| `POST /empresas/registro` | publico |
+| `POST /auth/login` | publico |
 | `GET /catalogos/roles` | Admin |
 | `POST /usuarios`, `GET /usuarios`, `PUT /usuarios/{id}`, `PATCH /usuarios/{id}/desactivar` | Admin |
 | `POST /conductores`, `PUT /conductores/{id}` | Admin, Despachador |
 | `GET /conductores`, `GET /conductores/{id}` | Admin, Despachador, Conductor (solo el suyo) |
+| `GET /conductores/{id}/asignaciones` | Admin, Despachador, Conductor (solo las suyas) |
 | `GET /conductores/licencias-por-vencer?dias=30` | Admin, Despachador |
 
 ### Flota (B2)
 
-| Método y ruta | Roles |
+| Metodo y ruta | Roles |
 |---|---|
 | `GET /catalogos/tipos-vehiculo` | Admin, Despachador, Conductor |
 | `GET /vehiculos`, `GET /vehiculos/{id}` | Admin, Despachador, Conductor |
@@ -101,9 +102,9 @@ Rutas bajo `/api`. “Todos” = cualquier usuario autenticado.
 | `PATCH /asignaciones/{id}/finalizar` | Admin, Despachador, Conductor |
 | `GET /vehiculos/{id}/asignaciones` | Admin, Despachador, Conductor (solo las suyas) |
 
-### Catálogos, clientes, direcciones y facturación (B3)
+### Catalogos, clientes, direcciones y facturacion (B3)
 
-| Método y ruta | Roles |
+| Metodo y ruta | Roles |
 |---|---|
 | `GET /catalogos/paises`, `/departamentos?paisId`, `/ciudades?departamentoId`, `/monedas` | Todos |
 | `POST /clientes`, `GET /clientes?buscar=`, `PUT /clientes/{id}` | Admin, Despachador |
@@ -112,17 +113,41 @@ Rutas bajo `/api`. “Todos” = cualquier usuario autenticado.
 | `GET /facturas?estado=`, `GET /facturas/{id}` | Admin, Despachador |
 | `POST /facturas/{id}/pagos` | Admin |
 
+### Envios, cotizaciones y seguimiento (B4)
+
+| Metodo y ruta | Roles |
+|---|---|
+| `POST /envios` | Admin, Despachador |
+| `GET /envios`, `GET /envios/{id}` | Admin, Despachador, Conductor (el conductor solo ve los suyos) |
+| `PUT /envios/{id}` | Admin, Despachador |
+| `PATCH /envios/{id}/cancelar` | Admin, Despachador |
+| `PATCH /envios/{id}/asignar` | Admin, Despachador |
+| `PATCH /envios/{id}/estado` | Admin, Despachador, Conductor |
+| `POST /envios/{id}/cotizaciones` | Admin, Despachador |
+| `GET /envios/{id}/cotizaciones` | Admin, Despachador, Conductor |
+| `PATCH /envios/{id}/cotizaciones/{cotizacionId}/aceptar` | Admin, Despachador |
+| `POST /envios/{id}/seguimiento` | Conductor |
+| `GET /envios/{id}/seguimiento`, `GET /envios/{id}/seguimiento/ultimo` | Admin, Despachador, Conductor |
+
+Reglas clave: solo se edita un envio `Pendiente`; asignar requiere vehiculo/conductor de la empresa y seguro vigente; el conductor solo marca `EnCurso`/`Completado` en sus envios; seguimiento solo en envios `EnCurso`.
+
 ### Subastas (B5)
 
-| Método y ruta | Roles |
+| Metodo y ruta | Roles |
 |---|---|
-| `POST /subastas`, `GET /subastas/mias?estado=`, `GET /subastas/{id}`, `PATCH /subastas/{id}/cancelar` | Contratante (dueño) |
+| `POST /subastas`, `GET /subastas/mias?estado=`, `GET /subastas/{id}`, `PATCH /subastas/{id}/cancelar` | Contratante (dueno) |
+| `GET /subastas/abiertas?tipoVehiculoId=` | Admin, Despachador |
+| `POST /subastas/{id}/pujas` | Admin, Despachador |
+| `GET /subastas/{id}/mejor-oferta` | Admin, Despachador, Contratante |
+| `DELETE /subastas/{id}/pujas/mia` | Admin, Despachador |
+| `GET /subastas/{id}/pujas` | Contratante (dueno) |
+| `PATCH /subastas/{id}/adjudicar` | Contratante (dueno) |
 
-El cierre automático **no usa temporizador**: al consultar una subasta `Abierta` cuya `fechaCierre` ya pasó, `SubastaCierreService` la pasa a `Vencida` y sus pujas activas a `Perdedora`.
+El cierre automatico **no usa temporizador**: al consultar/listar subastas abiertas, `SubastaCierreService` pasa a `Vencida` las que ya superaron `fechaCierre` y marca sus pujas activas como `Perdedora`. La adjudicacion es transaccional: crea/reusa cliente y copia direcciones en la empresa ganadora, crea el envio `Pendiente`, marca la puja ganadora/perdedoras y la subasta como `Adjudicada`.
 
 ### Salud
 
-`GET /health` (público) → `200 {"status":"Healthy"}` si hay conexión con la base.
+`GET /health` (publico) -> `200 {"status":"Healthy"}` si hay conexion con la base.
 
 ## Pruebas
 
@@ -135,14 +160,14 @@ Prueba de punta a punta contra la API real (PowerShell, con la API y Postgres co
 ```powershell
 cd backend
 powershell -ExecutionPolicy Bypass -File .\probar-todo.ps1
-# Con el compose de infra/:
-powershell -ExecutionPolicy Bypass -File .\probar-todo.ps1 -Contenedor postgres-quickgo -Usuario quickgo
+# Con el compose de infra/ o defaults distintos:
+powershell -ExecutionPolicy Bypass -File .\probar-todo.ps1 -Contenedor quickgo-pg -Usuario postgres -Db quickgo -Base http://localhost:5010
 ```
 
-- Cada ejecución crea empresas con datos únicos, así que se puede repetir sin limpiar la base.
-- `-SinEsperaCierre` omite la espera de ~50 s de la prueba de cierre automático.
-- El script inserta catálogos y envíos de prueba usando `wsl docker exec … psql`. Si Docker corre nativo en Windows, quita `wsl` en la función `Psql`.
-- Resultado esperado hoy: **187 PASS, 0 FAIL**.
+- Cada ejecucion crea empresas con datos unicos, asi que se puede repetir sin limpiar la base.
+- `-SinEsperaCierre` omite la espera de ~50 s de la prueba de cierre automatico.
+- El script inserta catalogos usando `wsl docker exec ... psql`. Si Docker corre nativo en Windows, quita `wsl` en la funcion `Psql`.
+- Cubre B1, B2 (excepto B2-05), B3, B4 y B5 (excepto B3-05/B2-05). El conteo exacto de PASS puede variar levemente con ajustes del script; al final debe reportar `FAIL: 0`.
 
 ## Migraciones
 
@@ -155,8 +180,5 @@ Un cambio de columnas se avisa al equipo y se sube en un PR aparte.
 
 ## Pendiente en el backend
 
-- B2-04: `GET /api/conductores/{id}/asignaciones`.
-- B2-05: Dockerfile de la API y `docker-compose` completo (API + PostgreSQL).
-- B3-05: GitHub Actions (CI/CD).
-- B4-01 … B4-05: envíos, cotizaciones y seguimiento.
-- B5-03 … B5-05: pujar, mejor oferta, retirar puja y adjudicar.
+- B2-05: Dockerfile de la API y `docker-compose` completo (API + PostgreSQL). (excluido por ahora)
+- B3-05: GitHub Actions (CI/CD). (excluido por ahora)

@@ -1,5 +1,6 @@
 using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 using System.Text.Json.Serialization;
 using quickgo.Infrastructure;
 using quickgo.Infrastructure.Data;
@@ -29,7 +30,19 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(connectionString);
 builder.Services.AddQuickGoAuth(builder.Configuration, builder.Environment);
 builder.Services.AddHostedService<MigracionesHostedService>();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        document.Info = new()
+        {
+            Title = "QuickGo API",
+            Version = "v1",
+            Description = "API REST de QuickGo. Autenticacion JWT Bearer. La empresa se toma del token (empresaId); no enviar empresaId en el body. Errores en formato ProblemDetails."
+        };
+        return Task.CompletedTask;
+    });
+});
 builder.Services.AddProblemDetails();
 
 builder.Services.AddControllers()
@@ -47,7 +60,13 @@ app.MapGet("/health", async (QuickGoDbContext dbContext, CancellationToken cance
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.MapScalarApiReference();
+    app.MapScalarApiReference(options =>
+    {
+        options
+            .WithTitle("QuickGo API")
+            .WithTheme(ScalarTheme.Default)
+            .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
+    });
 }
 else
 {

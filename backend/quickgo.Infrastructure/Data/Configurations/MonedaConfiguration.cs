@@ -14,5 +14,10 @@ public class MonedaConfiguration : IEntityTypeConfiguration<Moneda>
         builder.Property(m => m.Codigo).HasMaxLength(3);
         builder.Property(m => m.Nombre).HasMaxLength(50).IsRequired();
         builder.Property(m => m.Simbolo).HasMaxLength(5);
+
+        // B3-01: monedas iniciales (Lempira y Dolar).
+        builder.HasData(
+            new Moneda { Codigo = "HNL", Nombre = "Lempira", Simbolo = "L" },
+            new Moneda { Codigo = "USD", Nombre = "Dólar estadounidense", Simbolo = "$" });
     }
 }

@@ -98,3 +98,18 @@ public class SeguimientoEnvioConfiguration : IEntityTypeConfiguration<Seguimient
         builder.Property(s => s.Estado).HasMaxLength(30).IsRequired();
     }
 }
+
+public class CotizacionConfiguration : IEntityTypeConfiguration<Cotizacion>
+{
+    public void Configure(EntityTypeBuilder<Cotizacion> builder)
+    {
+        builder.ToTable("cotizaciones");
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Monto).HasPrecision(12, 2).IsRequired();
+        builder.Property(c => c.MonedaCodigo).HasMaxLength(3).IsRequired();
+        builder.Property(c => c.ValidaHasta).IsRequired();
+        builder.Property(c => c.Aceptada).IsRequired();
+        builder.HasOne<Envio>().WithMany().HasForeignKey(c => c.EnvioId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Moneda>().WithMany().HasForeignKey(c => c.MonedaCodigo).OnDelete(DeleteBehavior.Restrict);
+    }
+}

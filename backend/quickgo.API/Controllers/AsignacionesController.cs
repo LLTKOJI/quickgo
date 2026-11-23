@@ -18,6 +18,13 @@ public class AsignacionesController : TenantControllerBase
     }
 
     [HttpPost]
+    [EndpointSummary("Crear asignacion vehiculo-conductor")]
+    [EndpointDescription("Roles: Admin, Despachador. Crea una asignacion activa entre vehiculo y conductor de la misma empresa. Valida disponibilidad y estado.")]
+    [ProducesResponseType(typeof(AsignacionResponseDTO), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create(
         CrearAsignacionRequestDTO request,
         CancellationToken cancellationToken)
@@ -65,6 +72,13 @@ public class AsignacionesController : TenantControllerBase
     }
 
     [HttpPatch("{id:guid}/finalizar")]
+    [EndpointSummary("Finalizar asignacion")]
+    [EndpointDescription("Roles: Admin, Despachador, Conductor. Finaliza una asignacion activa. El conductor solo puede finalizar las suyas.")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Finalizar(Guid id, CancellationToken cancellationToken)
     {
         if (!TryGetEmpresaId(out var empresaId))

@@ -99,6 +99,7 @@ public class ServiciosPrueba {
         Empresas = new EmpresaService(empresas, usuarios, roles, hasher, uow);
         Auth = new AuthService(usuarios, hasher, new TokenFalso());
         Usuarios = new UsuarioService(usuarios, roles, empresas, hasher, uow, tenant);
-        Conductores = new ConductorService(conductores, usuarios, roles, empresas, hasher, uow, tenant);
+        Conductores = new ConductorService(conductores, usuarios, roles, empresas, hasher, uow, tenant,
+            new AsignacionRepository(Db));
     }
 }

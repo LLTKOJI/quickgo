@@ -18,9 +18,11 @@ public class ConductorService {
     private readonly IPasswordHasher _hasher;
     private readonly IUnitOfWork _uow;
     private readonly ITenantContext _tenant;
+    private readonly IAsignacionRepository _asignaciones;
 
     public ConductorService(IConductorRepository conductores, IUsuarioRepository usuarios, IRolRepository roles,
-        IEmpresaRepository empresas, IPasswordHasher hasher, IUnitOfWork uow, ITenantContext tenant) {
+        IEmpresaRepository empresas, IPasswordHasher hasher, IUnitOfWork uow, ITenantContext tenant,
+        IAsignacionRepository asignaciones) {
         _conductores = conductores;
         _usuarios = usuarios;
         _roles = roles;
@@ -28,6 +30,7 @@ public class ConductorService {
         _hasher = hasher;
         _uow = uow;
         _tenant = tenant;
+        _asignaciones = asignaciones;
     }
 
     public async Task<Resultado<ConductorResponse>> CrearAsync(CrearConductorRequest request) {
@@ -120,6 +123,27 @@ public class ConductorService {
         return conductor is null ? NoExiste() : Resultado<ConductorResponse>.Ok(conductor.ToResponse());
     }
 
+    /// <summary>B2-04: historial de asignaciones de un conductor (la vigente primero por fecha de inicio descendente).</summary>
+    public async Task<Resultado<IReadOnlyList<AsignacionVehiculoConductor>>> ListarAsignacionesAsync(
+        Guid id, CancellationToken cancellationToken = default) {
+        if (_tenant.EmpresaId is not Guid empresaId) {
+            return Resultado<IReadOnlyList<AsignacionVehiculoConductor>>.NoAutenticado(
+                "Token inválido", "El token no tiene una empresa.");
+        }
+
+        // El rol Conductor solo ve lo suyo; para el resto se confirma que el conductor sea de la empresa.
+        if (_tenant.Rol == Roles.Conductor && _tenant.UserId != id) {
+            return ConductorNoExiste();
+        }
+
+        if (await _conductores.GetByIdAsync(id) is null) {
+            return ConductorNoExiste();
+        }
+
+        var asignaciones = await _asignaciones.GetByConductorAsync(empresaId, id, cancellationToken);
+        return Resultado<IReadOnlyList<AsignacionVehiculoConductor>>.Ok(asignaciones);
+    }
+
     public async Task<Resultado<ConductorResponse>> ActualizarAsync(Guid id, ActualizarConductorRequest request) {
         var conductor = await _conductores.GetByIdAsync(id);
         if (conductor is null || conductor.Usuario is null) {
@@ -171,4 +195,7 @@ public class ConductorService {
 
     private static Resultado<ConductorResponse> NoExiste() =>
         Resultado<ConductorResponse>.NoEncontrado("Conductor no encontrado", "El conductor no existe.");
+
+    private static Resultado<IReadOnlyList<AsignacionVehiculoConductor>> ConductorNoExiste() =>
+        Resultado<IReadOnlyList<AsignacionVehiculoConductor>>.NoEncontrado("Conductor no encontrado", "El conductor no existe.");
 }
