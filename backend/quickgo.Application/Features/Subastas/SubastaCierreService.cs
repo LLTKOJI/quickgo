@@ -23,4 +23,9 @@ public class SubastaCierreService {
         var vencidas = await _repository.ObtenerAbiertasVencidasAsync(empresaId);
         await _repository.VencerAsync(vencidas);
     }
+
+    public async Task AplicarTodasVencidasAsync() {
+        var vencidas = await _repository.ObtenerAbiertasVencidasGlobalAsync();
+        await _repository.VencerAsync(vencidas);
+    }
 }

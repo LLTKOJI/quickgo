@@ -27,6 +27,11 @@ public class VehiculoController : TenantControllerBase
     }
 
     [HttpGet]
+    [EndpointSummary("Listar vehiculos")]
+    [EndpointDescription("Roles: Admin, Despachador, Conductor. Lista vehiculos de la empresa. Filtros opcionales por estado, tipoVehiculoId e incluirBaja.")]
+    [ProducesResponseType(typeof(IEnumerable<VehiculoResponseDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetVehiculos(
         [FromQuery] VehiculoFiltroQuery filtro,
         CancellationToken cancellationToken)
@@ -57,6 +62,12 @@ public class VehiculoController : TenantControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [EndpointSummary("Obtener vehiculo por id")]
+    [EndpointDescription("Roles: Admin, Despachador, Conductor. Devuelve el vehiculo de la empresa. Si no existe o es de otra empresa responde 404.")]
+    [ProducesResponseType(typeof(VehiculoResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetVehiculo(Guid id, CancellationToken cancellationToken)
     {
         if (!TryGetEmpresaId(out var empresaId))
@@ -74,6 +85,13 @@ public class VehiculoController : TenantControllerBase
     }
 
     [HttpPost]
+    [EndpointSummary("Crear vehiculo")]
+    [EndpointDescription("Roles: Admin, Despachador. Registra un vehiculo en la empresa. Valida tipo de vehiculo y placa unica por empresa.")]
+    [ProducesResponseType(typeof(VehiculoResponseDTO), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> CreateVehiculo(
         CreateVehiculoRequestDTO request,
         CancellationToken cancellationToken)
@@ -128,6 +146,14 @@ public class VehiculoController : TenantControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [EndpointSummary("Actualizar vehiculo")]
+    [EndpointDescription("Roles: Admin, Despachador. Actualiza datos del vehiculo. No permite cambiar a estado Baja por este endpoint.")]
+    [ProducesResponseType(typeof(VehiculoResponseDTO), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> UpdateVehiculo(
         Guid id,
         ActualizarVehiculoRequestDTO request,
@@ -176,6 +202,13 @@ public class VehiculoController : TenantControllerBase
     }
 
     [HttpPatch("{id:guid}/baja")]
+    [EndpointSummary("Dar de baja vehiculo")]
+    [EndpointDescription("Roles: Admin. Da de baja logica al vehiculo. No permite baja si tiene envios asignados o en curso.")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> DarDeBaja(Guid id, CancellationToken cancellationToken)
     {
         if (!TryGetEmpresaId(out var empresaId))
@@ -200,6 +233,13 @@ public class VehiculoController : TenantControllerBase
     }
 
     [HttpPost("{id:guid}/documentos")]
+    [EndpointSummary("Agregar documento al vehiculo")]
+    [EndpointDescription("Roles: Admin. Registra documento del vehiculo (por ejemplo Seguro). La fecha de vencimiento es obligatoria.")]
+    [ProducesResponseType(typeof(DocumentoResponseDTO), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CreateDocumento(
         Guid id,
         CrearDocumentoRequestDTO request,
@@ -242,6 +282,12 @@ public class VehiculoController : TenantControllerBase
     }
 
     [HttpGet("{id:guid}/documentos")]
+    [EndpointSummary("Listar documentos del vehiculo")]
+    [EndpointDescription("Roles: Admin, Despachador. Devuelve documentos del vehiculo de la empresa.")]
+    [ProducesResponseType(typeof(IEnumerable<DocumentoResponseDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetDocumentos(Guid id, CancellationToken cancellationToken)
     {
         if (!TryGetEmpresaId(out var empresaId))
@@ -265,6 +311,12 @@ public class VehiculoController : TenantControllerBase
     }
 
     [HttpGet("{id:guid}/asignaciones")]
+    [EndpointSummary("Listar asignaciones del vehiculo")]
+    [EndpointDescription("Roles: Admin, Despachador, Conductor. El conductor solo ve sus propias asignaciones sobre ese vehiculo.")]
+    [ProducesResponseType(typeof(IEnumerable<AsignacionResponseDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAsignacionesVehiculo(Guid id, CancellationToken cancellationToken)
     {
         if (!TryGetEmpresaId(out var empresaId))

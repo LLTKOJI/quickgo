@@ -1,4 +1,5 @@
 using quickgo.Application.Interfaces;
+using quickgo.Application.Features.Asignacion.DTOs;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -87,6 +88,21 @@ public class ConductoresController : ApiControllerBase
     public async Task<IActionResult> Obtener(Guid id)
     {
         return Responder(await _service.ObtenerAsync(id));
+    }
+
+    [HttpGet("{id:guid}/asignaciones")]
+    [Authorize(Roles = Roles.AdminDespachadorConductor)]
+    [EndpointSummary("Asignaciones de un conductor")]
+    [EndpointDescription("Roles: Admin, Despachador y Conductor (solo el suyo). Historial de vehículos asignados al conductor, del más reciente al más antiguo; Vigente = true cuando no tiene fecha de fin. Conductor de otra empresa: 404.")]
+    [ProducesResponseType(typeof(IEnumerable<AsignacionResponseDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Asignaciones(Guid id, CancellationToken cancellationToken)
+    {
+        return Responder(
+            await _service.ListarAsignacionesAsync(id, cancellationToken),
+            asignaciones => Ok(asignaciones.Select(AsignacionesController.ToResponse)));
     }
 
     [HttpPut("{id:guid}")]

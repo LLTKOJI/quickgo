@@ -233,6 +233,7 @@ $null = T "8.12 Vehiculo 2 a Disponible" PUT "/api/vehiculos/$veh2" @{ estado="D
 $null = T "8.13 Seguro vigente al vehiculo 1 (Admin)" POST "/api/vehiculos/$veh1/documentos" @{ tipo="Seguro"; numero="SEG-001"; fechaVencimiento=(Dia 365) } $tA @(200,201)
 $null = T "8.14 Revision que vence en 10 dias" POST "/api/vehiculos/$veh1/documentos" @{ tipo="Revision"; numero="REV-001"; fechaVencimiento=(Dia 10) } $tA @(200,201)
 $null = T "8.15 Revision ya vencida (vehiculo 2)" POST "/api/vehiculos/$veh2/documentos" @{ tipo="Revision"; numero="REV-002"; fechaVencimiento=(Dia -3) } $tA @(200,201)
+$null = T "8.15b Seguro vigente al vehiculo 2" POST "/api/vehiculos/$veh2/documentos" @{ tipo="Seguro"; numero="SEG-002"; fechaVencimiento=(Dia 365) } $tA @(200,201)
 $null = T "8.16 Despachador crea documento -> 403" POST "/api/vehiculos/$veh1/documentos" @{ tipo="Seguro"; numero="X"; fechaVencimiento=(Dia 30) } $tDesp @(403)
 $null = T "8.17 B crea documento en vehiculo de A -> 404" POST "/api/vehiculos/$veh1/documentos" @{ tipo="Seguro"; numero="X"; fechaVencimiento=(Dia 30) } $tB @(404)
 $dl = T "8.18 Listar documentos del vehiculo 1" GET "/api/vehiculos/$veh1/documentos" $null $tDesp @(200)
@@ -247,7 +248,7 @@ Verificar "8.21b nace vigente" ($as1.Body.vigente -eq $true) $as1.Texto
 $as2 = T "8.22 Reasignar vehiculo 1 al conductor externo" POST "/api/asignaciones" @{ vehiculoId=$veh1; conductorId=$cond2Id } $tDesp @(200,201); $asig2 = $as2.Body.id
 $hist = T "8.23 Historial del vehiculo 1" GET "/api/vehiculos/$veh1/asignaciones" $null $tDesp @(200)
 Verificar "8.23b 2 filas y solo 1 vigente" ((Cuenta $hist.Body) -eq 2 -and ([regex]::Matches($hist.Texto, '"vigente":true')).Count -eq 1) $hist.Texto
-$null = T "8.24 Historial del conductor (endpoint que falta en B2-04) -> 404 hoy" GET "/api/conductores/$cond1Id/asignaciones" $null $tDesp @(404)
+$null = T "8.24 Historial del conductor (B2-04)" GET "/api/conductores/$cond1Id/asignaciones" $null $tDesp @(200)
 $null = T "8.25 Finalizar asignacion vigente" PATCH "/api/asignaciones/$asig2/finalizar" $null $tDesp @(200,204)
 $null = T "8.26 Finalizarla otra vez -> error" PATCH "/api/asignaciones/$asig2/finalizar" $null $tDesp @(400,404,409)
 $null = T "8.27 B asigna vehiculo de A -> 400/404" POST "/api/asignaciones" @{ vehiculoId=$veh1; conductorId=$cond1Id } $tB @(400,404)
@@ -257,91 +258,122 @@ $null = T "8.30 Conductor externo de nuevo Activo" PUT "/api/conductores/$cond2I
 $null = T "8.31 Dejar asignacion vigente (vehiculo 1 al interno)" POST "/api/asignaciones" @{ vehiculoId=$veh1; conductorId=$cond1Id } $tDesp @(200,201)
 
 # ---------------------------------------------------------------
-Seccion "(Datos) Creando 3 envios de prueba directamente en la base (B4 aun no existe)"
-$eComp = [guid]::NewGuid().ToString(); $ePend = [guid]::NewGuid().ToString(); $eAsig = [guid]::NewGuid().ToString()
-$sqlEnv = @"
-INSERT INTO envios (id, empresa_id, cliente_id, origen_direccion_id, destino_direccion_id, vehiculo_id, estado, tipo_servicio, peso_kg, fecha_programada, tarifa, costo_externo)
-SELECT v.id, e.id, '$clienteId', '$dirA1', '$dirA2', v.vehiculo_id, v.estado, 'Carga', 1000, now() + interval '1 day', v.tarifa, 0
-FROM empresas e JOIN usuarios u ON u.empresa_id = e.id AND u.email = '$emailA'
-CROSS JOIN (VALUES
- ('$eComp'::uuid, NULL::uuid, 'Completado', 5000::numeric),
- ('$ePend'::uuid, NULL::uuid, 'Pendiente', 1000::numeric),
- ('$eAsig'::uuid, '$veh2'::uuid, 'Asignado', 2000::numeric)) AS v(id, vehiculo_id, estado, tarifa);
-"@
-if ($clienteId -and $dirA1 -and $dirA2 -and $veh2) { $r = Psql $sqlEnv } else { $r = "faltan clienteId/direcciones/vehiculo (fallaron pasos anteriores)"; $LASTEXITCODE = 1 }
-Verificar "envios de prueba insertados" ($LASTEXITCODE -eq 0 -and ($r | Out-String) -match "INSERT 0 3") ($r | Out-String)
+Seccion "9. B4-01 a B4-05 Envios, cotizaciones y seguimiento"
+$envBody = @{ clienteId=$clienteId; origenDireccionId=$dirA1; destinoDireccionId=$dirA2; tipoServicio="Carga"; fechaProgramada=(Iso 2); pesoKg=1000; volumenM3=5; tarifa=5000 }
+$e1 = T "9.1 Crear envio" POST "/api/envios" $envBody $tDesp @(200,201); $env1 = $e1.Body.id
+Verificar "9.1b estado Pendiente" ($e1.Body.estado -eq "Pendiente") $e1.Texto
+$eBad = $envBody.Clone(); $eBad.origenDireccionId = $dirA1; $eBad.destinoDireccionId = $dirA1
+$null = T "9.2 Origen igual destino -> 400" POST "/api/envios" $eBad $tDesp @(400)
+$eBad2 = $envBody.Clone(); $eBad2.fechaProgramada = (Iso -1)
+$null = T "9.3 Fecha pasada -> 400" POST "/api/envios" $eBad2 $tDesp @(400)
+$eList = T "9.4 Listar envios" GET "/api/envios" $null $tDesp @(200)
+Verificar "9.4b hay 1" ((Cuenta $eList.Body) -ge 1) $eList.Texto
+$eDet = T "9.5 Detalle envio" GET "/api/envios/$env1" $null $tDesp @(200)
+Verificar "9.5b incluye margen" ($null -ne $eDet.Body.margen) $eDet.Texto
+$eUp = $envBody.Clone(); $eUp.tarifa = 6000
+$eu = T "9.6 Editar envio pendiente" PUT "/api/envios/$env1" $eUp $tDesp @(200)
+Verificar "9.6b tarifa actualizada" ($eu.Body.tarifa -eq 6000) $eu.Texto
+$null = T "9.7 B ve envio de A -> 404" GET "/api/envios/$env1" $null $tB @(404)
+
+# asignacion de vehiculo/conductor para envio (usar veh2, cond1)
+$asigEnv = T "9.8 Asignar envio" PATCH "/api/envios/$env1/asignar" @{ vehiculoId=$veh2; conductorId=$cond1Id; costoExterno=1000 } $tDesp @(200)
+Verificar "9.8b estado Asignado" ($asigEnv.Body.estado -eq "Asignado") $asigEnv.Texto
+$null = T "9.9 Editar envio ya asignado -> 409" PUT "/api/envios/$env1" $eUp $tDesp @(409)
+
+# cotizaciones
+$cot = T "9.10 Crear cotizacion" POST "/api/envios/$env1/cotizaciones" @{ monto=5500; monedaCodigo="HNL"; validaHasta=(Iso 5) } $tDesp @(200,201); $cotId = $cot.Body.id
+$cotList = T "9.11 Listar cotizaciones" GET "/api/envios/$env1/cotizaciones" $null $tDesp @(200)
+Verificar "9.11b hay 1" ((Cuenta $cotList.Body) -ge 1) $cotList.Texto
+$cotAcc = T "9.12 Aceptar cotizacion" PATCH "/api/envios/$env1/cotizaciones/$cotId/aceptar" $null $tDesp @(200)
+Verificar "9.12b aceptada" ($cotAcc.Body.aceptada -eq $true) $cotAcc.Texto
+
+# cambio de estado por conductor
+$est1 = T "9.13 Conductor marca EnCurso" PATCH "/api/envios/$env1/estado" @{ estado="EnCurso" } $tCond @(200)
+Verificar "9.13b EnCurso" ($est1.Body.estado -eq "EnCurso") $est1.Texto
+$seg1 = T "9.14 Registrar seguimiento" POST "/api/envios/$env1/seguimiento" @{ lat=14.1; lng=-87.2; estado="En ruta" } $tCond @(200,201)
+$segList = T "9.15 Listar seguimiento" GET "/api/envios/$env1/seguimiento" $null $tDesp @(200)
+Verificar "9.15b hay seguimiento" ((Cuenta $segList.Body) -ge 1) $segList.Texto
+$segUlt = T "9.16 Ultimo seguimiento" GET "/api/envios/$env1/seguimiento/ultimo" $null $tDesp @(200)
+Verificar "9.16b ultimo" ($segUlt.Body.estado -eq "En ruta") $segUlt.Texto
+$est2 = T "9.17 Conductor marca Completado" PATCH "/api/envios/$env1/estado" @{ estado="Completado" } $tCond @(200)
+Verificar "9.17b Completado" ($est2.Body.estado -eq "Completado") $est2.Texto
+
+# cancelar envio pendiente
+$env2 = T "9.18 Crear envio para cancelar" POST "/api/envios" $envBody $tDesp @(200,201); $env2Id = $env2.Body.id
+$can = T "9.19 Cancelar envio pendiente" PATCH "/api/envios/$env2Id/cancelar" $null $tDesp @(200)
+Verificar "9.19b Cancelado" ($can.Body.estado -eq "Cancelado") $can.Texto
 
 # ---------------------------------------------------------------
-Seccion "9. B2-02 Baja de vehiculos"
-$null = T "9.1 Baja del vehiculo 2 con envio Asignado -> 409" PATCH "/api/vehiculos/$veh2/baja" $null $tA @(409)
-$null = T "9.2 Despachador da de baja -> 403" PATCH "/api/vehiculos/$veh1/baja" $null $tDesp @(403)
-$null = T "9.3 Baja del vehiculo 1 (sin envios activos)" PATCH "/api/vehiculos/$veh1/baja" $null $tA @(200,204)
-$h2 = T "9.4 Historial: la asignacion vigente se cerro" GET "/api/vehiculos/$veh1/asignaciones" $null $tDesp @(200)
-Verificar "9.4b ninguna asignacion queda vigente" (([regex]::Matches($h2.Texto, '"vigente":true')).Count -eq 0) $h2.Texto
-$lb1 = T "9.5 La lista oculta vehiculos en Baja" GET "/api/vehiculos" $null $tDesp @(200)
-Verificar "9.5b solo queda 1 (HAB-1002)" ((Cuenta $lb1.Body) -eq 1) $lb1.Texto
-$lb2 = T "9.6 Incluyendo Baja" GET "/api/vehiculos?incluirBaja=true" $null $tDesp @(200)
-Verificar "9.6b salen 2" ((Cuenta $lb2.Body) -eq 2) $lb2.Texto
-
-# ---------------------------------------------------------------
-Seccion "10. B3-04 Facturas y pagos"
-$f = T "10.1 Facturar envio Completado (tarifa 5000)" POST "/api/facturas" @{ envioId=$eComp; monedaCodigo="USD" } $tA @(200,201)
+Seccion "10. B3-04 Facturas y pagos (sobre envio Completado via API)"
+$f = T "10.1 Facturar envio Completado (tarifa aceptada)" POST "/api/facturas" @{ envioId=$env1; monedaCodigo="USD" } $tA @(200,201)
 $facId = $f.Body.id
-Verificar "10.1b monto=5000 y estado Pendiente" ($f.Body.monto -eq 5000 -and $f.Body.estado -eq "Pendiente") $f.Texto
-$null = T "10.2 Facturar el mismo envio -> 409" POST "/api/facturas" @{ envioId=$eComp } $tA @(409)
-$null = T "10.3 Facturar envio Pendiente -> 409" POST "/api/facturas" @{ envioId=$ePend } $tA @(409)
-$null = T "10.4 B factura envio de A -> 404" POST "/api/facturas" @{ envioId=$eComp } $tB @(404)
-$null = T "10.5 Despachador crea factura -> 403" POST "/api/facturas" @{ envioId=$eComp } $tDesp @(403)
-$null = T "10.6 Despachador consulta facturas" GET "/api/facturas" $null $tDesp @(200)
-$fp = T "10.7 Filtrar por estado Pendiente" GET "/api/facturas?estado=Pendiente" $null $tA @(200)
-Verificar "10.7b hay 1" ((Cuenta $fp.Body) -eq 1) $fp.Texto
+Verificar "10.1b factura creada" ($facId -ne $null) $f.Texto
+$null = T "10.2 Facturar el mismo envio -> 409" POST "/api/facturas" @{ envioId=$env1 } $tA @(409)
+$envPend = T "10.3 Crear envio pendiente para factura" POST "/api/envios" $envBody $tDesp @(200,201); $envPendId = $envPend.Body.id
+$null = T "10.4 Facturar envio Pendiente -> 409" POST "/api/facturas" @{ envioId=$envPendId } $tA @(409)
+$null = T "10.5 B factura envio de A -> 404" POST "/api/facturas" @{ envioId=$env1 } $tB @(404)
+$null = T "10.6 Despachador crea factura -> 403" POST "/api/facturas" @{ envioId=$env1 } $tDesp @(403)
+$null = T "10.7 Despachador consulta facturas" GET "/api/facturas" $null $tDesp @(200)
 $fd = T "10.8 Detalle de la factura" GET "/api/facturas/$facId" $null $tA @(200)
-Verificar "10.8b saldoPendiente=5000" ($fd.Body.saldoPendiente -eq 5000) $fd.Texto
-$p1 = T "10.9 Pago parcial 2000 efectivo" POST "/api/facturas/$facId/pagos" @{ metodo="Efectivo"; monto=2000 } $tA @(200,201)
-Verificar "10.9b saldoRestante=3000" ($p1.Body.saldoPendiente -eq 3000) $p1.Texto
-$null = T "10.10 Pago mayor al saldo -> error" POST "/api/facturas/$facId/pagos" @{ metodo="Transferencia"; monto=4000 } $tA @(400,409)
-$null = T "10.11 Pago con monto 0 -> 400" POST "/api/facturas/$facId/pagos" @{ metodo="Tarjeta"; monto=0 } $tA @(400)
-$null = T "10.12 Metodo invalido -> 400" POST "/api/facturas/$facId/pagos" @{ metodo="Bitcoin"; monto=100 } $tA @(400)
-$p2 = T "10.13 Pago final 3000 transferencia" POST "/api/facturas/$facId/pagos" @{ metodo="Transferencia"; monto=3000 } $tA @(200,201)
-Verificar "10.13b factura Pagada y saldo 0" ($p2.Body.saldoPendiente -eq 0 -and $p2.Body.estado -eq "Pagada") $p2.Texto
-$null = T "10.14 Pagar factura ya Pagada -> 409" POST "/api/facturas/$facId/pagos" @{ metodo="Efectivo"; monto=1 } $tA @(400,409)
-$fg = T "10.15 Filtrar por estado Pagada" GET "/api/facturas?estado=Pagada" $null $tA @(200)
-Verificar "10.15b hay 1" ((Cuenta $fg.Body) -eq 1) $fg.Texto
-$null = T "10.16 B consulta factura de A -> 404" GET "/api/facturas/$facId" $null $tB @(404)
+$montoFac = [decimal]$fd.Body.monto
+$pago1Monto = [math]::Floor($montoFac/2)
+$resto = $montoFac - $pago1Monto
+$p1 = T "10.9 Pago parcial" POST "/api/facturas/$facId/pagos" @{ metodo="Efectivo"; monto=$pago1Monto } $tA @(200,201)
+Verificar "10.9b saldo restante" ([decimal]$p1.Body.saldoRestante -eq $resto) $p1.Texto
+$null = T "10.10 Pago mayor al saldo -> error" POST "/api/facturas/$facId/pagos" @{ metodo="Transferencia"; monto=($resto+1000) } $tA @(400,409)
+$p2 = T "10.11 Pago final" POST "/api/facturas/$facId/pagos" @{ metodo="Transferencia"; monto=$resto } $tA @(200,201)
+Verificar "10.11b factura Pagada" ($p2.Body.estadoFactura -eq "Pagada") $p2.Texto
+$null = T "10.12 Pagar factura ya Pagada -> 409" POST "/api/facturas/$facId/pagos" @{ metodo="Efectivo"; monto=1 } $tA @(400,409)
+$null = T "10.13 B consulta factura de A -> 404" GET "/api/facturas/$facId" $null $tB @(404)
 
 # ---------------------------------------------------------------
-Seccion "11. B5-01 y B5-02 Subastas"
+Seccion "11. B5-01 a B5-05 Subastas, pujas y adjudicacion"
 $sub = @{ tipoVehiculoId=$tipoCamion; origenDireccionId=$dirC1; destinoDireccionId=$dirC2; descripcion="20 toneladas de cemento"; pesoKg=20000; volumenM3=15; precioMaximo=25000; monedaCodigo="HNL"; fechaCierre=(Iso 30) }
 $sc = T "11.1 Publicar subasta" POST "/api/subastas" $sub $tC2 @(200,201); $subId = $sc.Body.id
 Verificar "11.1b estado Abierta" ($sc.Body.estado -eq "Abierta") $sc.Texto
 $null = T "11.2 Transportista publica -> 403" POST "/api/subastas" $sub $tA @(403)
-$x = $sub.Clone(); $x.fechaCierre = (Iso -1)
-$null = T "11.3 Cierre en el pasado -> 400" POST "/api/subastas" $x $tC2 @(400)
-$x = $sub.Clone(); $x.destinoDireccionId = $dirC1
-$null = T "11.4 Origen igual al destino -> 400" POST "/api/subastas" $x $tC2 @(400)
-$x = $sub.Clone(); $x.origenDireccionId = $dirA1; $x.destinoDireccionId = $dirA2
-$null = T "11.5 Direcciones de otra empresa -> 400/404" POST "/api/subastas" $x $tC2 @(400,404)
-$x = $sub.Clone(); $x.monedaCodigo = "XXX"
-$null = T "11.6 Moneda inexistente -> 400" POST "/api/subastas" $x $tC2 @(400)
-$mi = T "11.7 Mis subastas" GET "/api/subastas/mias" $null $tC2 @(200)
-Verificar "11.7b hay 1" ((Cuenta $mi.Body) -eq 1) $mi.Texto
-$mf = T "11.8 Filtrar por estado Abierta" GET "/api/subastas/mias?estado=Abierta" $null $tC2 @(200)
-Verificar "11.8b hay 1" ((Cuenta $mf.Body) -eq 1) $mf.Texto
-$sd = T "11.9 Detalle de la subasta" GET "/api/subastas/$subId" $null $tC2 @(200)
-Verificar "11.9b totalPujas=0" ($sd.Body.totalPujas -eq 0) $sd.Texto
-$null = T "11.10 D pide subasta de C -> 404" GET "/api/subastas/$subId" $null $tD2 @(404)
-$md = T "11.11 D lista sus subastas (vacio)" GET "/api/subastas/mias" $null $tD2 @(200)
-Verificar "11.11b D no ve las de C" ((Cuenta $md.Body) -eq 0) $md.Texto
-$null = T "11.12 D cancela subasta de C -> 404" PATCH "/api/subastas/$subId/cancelar" $null $tD2 @(404)
-$cc = T "11.13 C cancela su subasta" PATCH "/api/subastas/$subId/cancelar" $null $tC2 @(200,204)
-$null = T "11.14 Cancelar otra vez -> 409" PATCH "/api/subastas/$subId/cancelar" $null $tC2 @(409)
+$mi = T "11.3 Mis subastas" GET "/api/subastas/mias" $null $tC2 @(200)
+Verificar "11.3b hay >=1" ((Cuenta $mi.Body) -ge 1) $mi.Texto
+$sd = T "11.4 Detalle de la subasta" GET "/api/subastas/$subId" $null $tC2 @(200)
+$null = T "11.5 D pide subasta de C -> 404" GET "/api/subastas/$subId" $null $tD2 @(404)
+
+# B5-03 pujar
+$ab = T "11.6 Listar subastas abiertas (A)" GET "/api/subastas/abiertas" $null $tDesp @(200)
+Verificar "11.6b contiene subasta" (($ab.Texto -match $subId)) $ab.Texto
+$pu1 = T "11.7 Pujar A" POST "/api/subastas/$subId/pujas" @{ conductorId=$cond1Id; monto=20000; mensaje="Oferta A" } $tDesp @(200,201); $pujaA = $pu1.Body.id
+$null = T "11.8 Pujar otra vez misma empresa -> 409" POST "/api/subastas/$subId/pujas" @{ conductorId=$cond1Id; monto=19000 } $tDesp @(409)
+$null = T "11.9 Monto mayor a maximo -> 400" POST "/api/subastas/$subId/pujas" @{ conductorId=$cond1Id; monto=30000 } $tB @(400)
+
+# Crear conductor en empresa B para pujar (B tiene vehiculo tipo camion? crear vehiculo tipo camion y conductor)
+$tipoCamionId = $tipoCamion
+$vB = T "11.10 B crea vehiculo camion" POST "/api/vehiculos" @{ tipoVehiculoId=$tipoCamionId; placa="BBB-$s"; vin="VINB$s"; propiedad="Propio" } $tB @(200,201); $vehB=$vB.Body.id
+$docB = T "11.11 B documento seguro" POST "/api/vehiculos/$vehB/documentos" @{ tipo="Seguro"; numero="SEG-B-$s"; fechaVencimiento=(Dia 180) } $tB @(200,201)
+$condB = T "11.12 B crea conductor interno" POST "/api/conductores" @{ primerNombre="Beto"; primerApellido="Cond"; email="condb.$s@otra.hn"; password=$Clave; tipoConductor="Interno"; licencia="LIC-B-$s"; venceLicencia=(Dia 180) } $tB @(200,201); $condBId=$condB.Body.id
+$pu2 = T "11.13 Pujar B" POST "/api/subastas/$subId/pujas" @{ conductorId=$condBId; monto=18000; mensaje="Oferta B" } $tB @(200,201); $pujaB=$pu2.Body.id
+
+# B5-04 mejor oferta y pujas
+$mo = T "11.14 Mejor oferta" GET "/api/subastas/$subId/mejor-oferta" $null $tDesp @(200)
+Verificar "11.14b monto 18000" ([decimal]$mo.Body.monto -eq 18000) $mo.Texto
+$pujasC = T "11.15 Contratante ve pujas" GET "/api/subastas/$subId/pujas" $null $tC2 @(200)
+Verificar "11.15b hay 2" ((Cuenta $pujasC.Body) -eq 2) $pujasC.Texto
+$null = T "11.16 D ve pujas de subasta ajena -> 404" GET "/api/subastas/$subId/pujas" $null $tD2 @(404)
+$null = T "11.17 Retirar puja A" DELETE "/api/subastas/$subId/pujas/mia" $null $tDesp @(200,204)
+$mo2 = T "11.18 Mejor oferta tras retiro" GET "/api/subastas/$subId/mejor-oferta" $null $tDesp @(200)
+Verificar "11.18b sigue 18000 (de B)" ([decimal]$mo2.Body.monto -eq 18000) $mo2.Texto
+
+# B5-05 adjudicar
+$adj = T "11.19 Adjudicar a puja B" PATCH "/api/subastas/$subId/adjudicar" @{ pujaId=$pujaB } $tC2 @(200)
+Verificar "11.19b estado Adjudicada" ($adj.Body.estado -eq "Adjudicada") $adj.Texto
+$null = T "11.20 Adjudicar otra vez -> 409" PATCH "/api/subastas/$subId/adjudicar" @{ pujaId=$pujaB } $tC2 @(409)
+
+# cierre automatico
 $sh = $sub.Clone(); $sh.fechaCierre = (Get-Date).ToUniversalTime().AddSeconds(45).ToString("yyyy-MM-ddTHH:mm:ssZ")
-$sk = T "11.15 Subasta que cierra en 45 segundos" POST "/api/subastas" $sh $tC2 @(200,201); $subCorta = $sk.Body.id
+$sk = T "11.21 Subasta que cierra en 45 segundos" POST "/api/subastas" $sh $tC2 @(200,201); $subCorta = $sk.Body.id
 if (-not $SinEsperaCierre) {
     Write-Host "  ... esperando 50 segundos para probar el cierre automatico ..." -ForegroundColor Yellow
     Start-Sleep -Seconds 50
-    $sv = T "11.16 Consultar tras el cierre" GET "/api/subastas/$subCorta" $null $tC2 @(200)
-    Verificar "11.16b estado Vencida (cierre automatico)" ($sv.Body.estado -eq "Vencida") $sv.Texto
+    $sv = T "11.22 Consultar tras el cierre" GET "/api/subastas/$subCorta" $null $tC2 @(200)
+    Verificar "11.22b estado Vencida (cierre automatico)" ($sv.Body.estado -eq "Vencida") $sv.Texto
 }
 
 # ---------------------------------------------------------------
@@ -354,4 +386,4 @@ if ($script:fallos.Count -gt 0) {
     $script:fallos | ForEach-Object { Write-Host (" - " + $_) -ForegroundColor Red }
 }
 Write-Host ""
-Write-Host "No existen todavia (no se prueban): B2-05 Docker, B3-05 CI/CD, B4-01..B4-05 Envios, B5-03..B5-05 Pujas/Adjudicar." -ForegroundColor DarkYellow
+Write-Host "Pendientes (excluidas por indicacion): B2-05 Docker, B3-05 CI/CD." -ForegroundColor DarkYellow

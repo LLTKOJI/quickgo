@@ -15,5 +15,21 @@ public interface ISubastaRepository {
     Task<List<Subasta>> ListarPorEmpresaAsync(Guid empresaId, EstadoSubasta? estado);
     Task<Dictionary<Guid, int>> ContarPujasPorSubastaAsync(IEnumerable<Guid> subastaIds);
     Task<List<Subasta>> ObtenerAbiertasVencidasAsync(Guid empresaId);
+    Task<List<Subasta>> ObtenerAbiertasVencidasGlobalAsync();
     Task VencerAsync(IEnumerable<Subasta> subastas);
+
+    Task<List<Subasta>> ListarAbiertasParaEmpresaAsync(Guid empresaId, Guid? tipoVehiculoId);
+    Task<Dictionary<Guid, decimal>> ObtenerMejoresOfertasAsync(IEnumerable<Guid> subastaIds);
+    Task<HashSet<Guid>> ObtenerSubastasPujadasPorEmpresaAsync(Guid empresaId, IEnumerable<Guid> subastaIds);
+    Task<Subasta?> GetAbiertaByIdAsync(Guid id);
+    Task<bool> EmpresaTieneVehiculoElegibleAsync(Guid empresaId, Guid tipoVehiculoId, DateOnly hoy);
+    Task<Conductor?> GetConductorActivoDeEmpresaAsync(Guid empresaId, Guid conductorId);
+    Task<Puja?> GetPujaEmpresaAsync(Guid subastaId, Guid empresaId);
+    Task<Puja> AddPujaAsync(Puja puja);
+    Task<Puja?> GetPujaByIdAsync(Guid pujaId);
+    Task<List<Puja>> ListarPujasSubastaAsync(Guid subastaId);
+    Task SaveChangesAsync();
+    Task<Subasta?> GetByIdConDetalleAsync(Guid empresaId, Guid id);
+    Task<Empresa?> GetEmpresaAsync(Guid empresaId);
+    Task<Guid> AdjudicarAsync(Subasta subasta, Puja ganadora, List<Puja> pujas, Guid empresaGanadora, string clienteNombre);
 }
